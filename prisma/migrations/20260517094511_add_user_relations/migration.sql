@@ -1,0 +1,31 @@
+/*
+  Warnings:
+
+  - The values [USER] on the enum `UserRole` will be removed. If these variants are still used in the database, this will fail.
+
+*/
+-- AlterEnum
+BEGIN;
+CREATE TYPE "UserRole_new" AS ENUM ('ADMIN', 'MANAGER', 'CASHIER');
+ALTER TABLE "public"."user" ALTER COLUMN "role" DROP DEFAULT;
+ALTER TABLE "user" ALTER COLUMN "role" TYPE "UserRole_new" USING ("role"::text::"UserRole_new");
+ALTER TYPE "UserRole" RENAME TO "UserRole_old";
+ALTER TYPE "UserRole_new" RENAME TO "UserRole";
+DROP TYPE "public"."UserRole_old";
+ALTER TABLE "user" ALTER COLUMN "role" SET DEFAULT 'CASHIER';
+COMMIT;
+
+-- AlterTable
+ALTER TABLE "Expense" ADD COLUMN     "userId" TEXT;
+
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN     "userId" TEXT;
+
+-- AlterTable
+ALTER TABLE "user" ALTER COLUMN "role" SET DEFAULT 'CASHIER';
+
+-- AddForeignKey
+ALTER TABLE "Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Expense" ADD CONSTRAINT "Expense_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;

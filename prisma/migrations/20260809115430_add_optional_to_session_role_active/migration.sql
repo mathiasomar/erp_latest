@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "session" ALTER COLUMN "isActive" DROP NOT NULL,
+ALTER COLUMN "role" DROP NOT NULL;

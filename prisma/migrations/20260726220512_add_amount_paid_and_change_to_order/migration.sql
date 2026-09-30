@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN     "amountPaid" DOUBLE PRECISION,
+ADD COLUMN     "change" DOUBLE PRECISION;
