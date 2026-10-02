@@ -155,6 +155,38 @@ enum PurchasePaymentStatus {
   PAID
 }
 
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+enum JournalEntrySource {
+  MANUAL
+  SALE
+  PURCHASE
+  EXPENSE
+  PAYMENT
+  PAYROLL
+  STOCK_ADJUSTMENT
+  OPENING_BALANCE
+  DEPRECIATION
+  TRANSFER
+}
+
 // ── Branch ────────────────────────────────────────────────────────────────────
 // Defined first — everything else references it
 
@@ -183,6 +215,8 @@ model Branch {
   receipts          Receipt[]
   suppliers         Supplier[]
   purchases         Purchase[]
+  accountings       Accounting[]
+  journalEntries    JournalEntry[]
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -213,9 +247,12 @@ model User {
   username        String?
   displayUsername String?
   receipts        Receipt[]
-  voidedReceipts  Receipt[]  @relation("ReceiptVoidedBy")
+  voidedReceipts  Receipt[]      @relation("ReceiptVoidedBy")
   stockLogs       StockLog[]
   purchases       Purchase[]
+  journalEntries  JournalEntry[]
+  postedJournalEntries   JournalEntry[] @relation("JournalPostedBy")
+  reversedJournalEntries JournalEntry[] @relation("JournalReversedBy")
 
   @@unique([username])
   @@map("user")
@@ -792,4 +829,77 @@ model PurchasePayment {
   paidAt     DateTime             @default(now())
 
   purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+}
+
+// ── Accounting ────────────────────────────────────────────────────────────────
+model Accounting {
+  id            String        @id @default(cuid())
+  code          String // e.g. "1000", "4000"
+  name          String // e.g. "Cash", "Sales Revenue"
+  type          AccountType
+  normalBalance NormalBalance
+  description   String?
+  parentId      String? // for sub-accounts
+  isActive      Boolean       @default(true)
+  isSystem      Boolean       @default(false) // system accounts can't be deleted
+  branchId      String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  branch   Branch?            @relation(fields: [branchId], references: [id])
+  parent   Accounting?        @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children Accounting[]       @relation("AccountHierarchy")
+  lines    JournalEntryLine[]
+
+  @@unique([code, branchId])
+  @@index([type])
+}
+
+model JournalEntry {
+  id           String             @id @default(cuid())
+  entryNumber  String // e.g. "JE-2025-0001"
+  date         DateTime
+  description  String
+  reference    String? // external ref (invoice #, receipt #)
+  status       JournalEntryStatus @default(DRAFT)
+  source       JournalEntrySource @default(MANUAL)
+  sourceId     String? // id of the order/purchase/expense
+  branchId     String?
+  userId       String?
+  postedAt     DateTime?
+  postedById   String?
+  reversedAt   DateTime?
+  reversedById String?
+  reversalOfId String? // links to the entry this reverses
+  notes        String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  branch            Branch?            @relation(fields: [branchId], references: [id])
+  user              User?              @relation(fields: [userId], references: [id])
+  postedBy          User?              @relation("JournalPostedBy", fields: [postedById], references: [id])
+  reversedBy        User?              @relation("JournalReversedBy", fields: [reversedById], references: [id])
+  reversalOf        JournalEntry?      @relation("JournalReversal", fields: [reversalOfId], references: [id])
+  reversedByEntries JournalEntry[]     @relation("JournalReversal")
+  lines             JournalEntryLine[]
+
+  @@unique([entryNumber, branchId])
+  @@index([date, status])
+  @@index([source, sourceId])
+}
+
+model JournalEntryLine {
+  id             String   @id @default(cuid())
+  journalEntryId String
+  accountId      String
+  debit          Float    @default(0)
+  credit         Float    @default(0)
+  description    String?
+  createdAt      DateTime @default(now())
+
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      Accounting   @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([journalEntryId])
 }
