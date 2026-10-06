@@ -10,9 +10,14 @@ datasource db {
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   MANAGER
   CASHIER
+  ACCOUNTANT
+  HR_OFFICER
+  SALES_PERSON
+  WAREHOUSE_CLERK
 }
 
 enum OrderStatus {
@@ -187,6 +192,47 @@ enum JournalEntrySource {
   TRANSFER
 }
 
+// ── Sales Pipeline Enums ──────────────────────────────────────────────────────
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  PARTIALLY_DELIVERED
+  FULLY_DELIVERED
+  INVOICED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  PENDING
+  PARTIAL
+  DELIVERED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum SalesReturnStatus {
+  PENDING
+  APPROVED
+  RECEIVED
+  REFUNDED
+}
+
 // ── Branch ────────────────────────────────────────────────────────────────────
 // Defined first — everything else references it
 
@@ -202,21 +248,34 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users             User[]
-  products          Product[]
-  categories        Category[]
-  orders            Order[]
-  expenses          Expense[]
-  customers         Customer[]
-  stocks            Stock[]
-  expenseCategories ExpenseCategory[]
-  mpesaTransactions MpesaTransaction[]
-  layaways          Layaway[]
-  receipts          Receipt[]
-  suppliers         Supplier[]
-  purchases         Purchase[]
-  accountings       Accounting[]
-  journalEntries    JournalEntry[]
+  users               User[]
+  products            Product[]
+  categories          Category[]
+  orders              Order[]
+  expenses            Expense[]
+  customers           Customer[]
+  stocks              Stock[]
+  expenseCategories   ExpenseCategory[]
+  mpesaTransactions   MpesaTransaction[]
+  layaways            Layaway[]
+  receipts            Receipt[]
+  suppliers           Supplier[]
+  purchases           Purchase[]
+  accountings         Accounting[]
+  journalEntries      JournalEntry[]
+  leads               Lead[]
+  opportunities       Opportunity[]
+  assets              Asset[]
+  documents           Document[]
+  accountsReceivables AccountsReceivable[]
+  accountsPayables    AccountsPayable[]
+  fixedAssets         FixedAsset[]
+  bankAccounts        BankAccount[]
+  quotations          Quotation[]
+  salesOrders         SalesOrder[]
+  deliveryNotes       DeliveryNote[]
+  invoices            Invoice[]
+  salesReturns        SalesReturn[]
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -232,6 +291,12 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  phone        String?
+  departmentId String? // Link to HR Department
+  positionId   String? // Link to HR Position
+  hireDate     DateTime?
+  salary       Float? // Base salary for Payroll
+
   // null = ADMIN (global), required for MANAGER + CASHIER
   branchId String?
   branch   Branch? @relation(fields: [branchId], references: [id])
@@ -244,15 +309,32 @@ model User {
   notifications Notification[]
   layaways      Layaway[]
 
-  username        String?
-  displayUsername String?
-  receipts        Receipt[]
-  voidedReceipts  Receipt[]      @relation("ReceiptVoidedBy")
-  stockLogs       StockLog[]
-  purchases       Purchase[]
-  journalEntries  JournalEntry[]
-  postedJournalEntries   JournalEntry[] @relation("JournalPostedBy")
-  reversedJournalEntries JournalEntry[] @relation("JournalReversedBy")
+  username                 String?
+  displayUsername          String?
+  receipts                 Receipt[]
+  voidedReceipts           Receipt[]         @relation("ReceiptVoidedBy")
+  stockLogs                StockLog[]
+  purchases                Purchase[]
+  journalEntries           JournalEntry[]
+  postedJournalEntries     JournalEntry[]    @relation("JournalPostedBy")
+  reversedJournalEntries   JournalEntry[]    @relation("JournalReversedBy")
+  leads                    Lead[]
+  department               Department?       @relation(fields: [departmentId], references: [id])
+  position                 Position?         @relation(fields: [positionId], references: [id])
+  leaveRequests            LeaveRequest[]
+  approvedLeaveRequests    LeaveRequest[]    @relation("LeaveApprover")
+  attendances              Attendance[]
+  payrolls                 Payroll[]
+  assets                   Asset[]
+  projectTasks             ProjectTask[]
+  documents                Document[]
+  approvalRequests         ApprovalRequest[] @relation("ApprovalRequester")
+  approvedApprovalRequests ApprovalRequest[] @relation("ApprovalApprover")
+  quotations               Quotation[]
+  salesOrders              SalesOrder[]
+  deliveryNotes            DeliveryNote[]
+  invoices                 Invoice[]
+  salesReturns             SalesReturn[]
 
   @@unique([username])
   @@map("user")
@@ -326,30 +408,40 @@ model Category {
 }
 
 model Product {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   name             String
   sku              String
-  barcode          String?
+  barcode          String?   @unique
+  qrCode           String? // For QR Code scanning
+  batchNumber      String? // For Batch tracking
+  expiryDate       DateTime? // For Expiry tracking
+  unit             String?   @default("pcs") // e.g., kg, box, pcs
+  brand            String? // For Brand management
   price            Float
-  lastPrice        Float    @default(0)
-  costPrice        Float    @default(0)
-  costPriceInclTax Float    @default(0) // ← new: cost price inclusive of tax
-  purchaseTaxRate  Float    @default(0) // tax rate % applied to purchase price
+  lastPrice        Float     @default(0)
+  costPrice        Float     @default(0)
+  costPriceInclTax Float     @default(0) // ← new: cost price inclusive of tax
+  purchaseTaxRate  Float     @default(0) // tax rate % applied to purchase price
   imageUrl         String?
-  isActive         Boolean  @default(true)
-  discountRate     Float    @default(0)
-  taxRate          Float    @default(0)
+  isActive         Boolean   @default(true)
+  discountRate     Float     @default(0)
+  taxRate          Float     @default(0)
   branchId         String?
   categoryId       String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  category      Category?      @relation(fields: [categoryId], references: [id])
-  orderItems    OrderItem[]
-  stock         Stock?
-  layawayItems  LayawayItem[]
-  purchaseItems PurchaseItem[]
+  branch            Branch?            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  category          Category?          @relation(fields: [categoryId], references: [id])
+  orderItems        OrderItem[]
+  stock             Stock?
+  layawayItems      LayawayItem[]
+  purchaseItems     PurchaseItem[]
+  quotationItems    QuotationItem[]
+  salesOrderItems   SalesOrderItem[]
+  deliveryNoteItems DeliveryNoteItem[]
+  invoiceItems      InvoiceItem[]
+  salesReturnItems  SalesReturnItem[]
 
   // SKU unique per branch
   @@unique([sku, branchId])
@@ -528,11 +620,17 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  branch    Branch?      @relation(fields: [branchId], references: [id])
-  orders    Order[]
-  pointLogs LoyaltyLog[]
-  layaways  Layaway[]
-  receipts  Receipt[]
+  branch              Branch?              @relation(fields: [branchId], references: [id])
+  orders              Order[]
+  pointLogs           LoyaltyLog[]
+  layaways            Layaway[]
+  receipts            Receipt[]
+  opportunities       Opportunity[]
+  accountsReceivables AccountsReceivable[]
+  quotations          Quotation[]
+  salesOrders         SalesOrder[]
+  invoices            Invoice[]
+  salesReturns        SalesReturn[]
 
   // phone unique per branch
   // email unique per branch
@@ -550,6 +648,98 @@ model LoyaltyLog {
   createdAt   DateTime       @default(now())
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model Lead {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?
+  phone        String?
+  source       String? // e.g., "Walk-in", "Website", "Referral"
+  status       String   @default("NEW") // NEW, CONTACTED, QUALIFIED, LOST
+  branchId     String?
+  assignedToId String?
+  createdAt    DateTime @default(now())
+
+  branch        Branch?       @relation(fields: [branchId], references: [id])
+  assignedTo    User?         @relation(fields: [assignedToId], references: [id])
+  opportunities Opportunity[]
+}
+
+model Opportunity {
+  id         String   @id @default(cuid())
+  title      String
+  value      Float
+  stage      String   @default("PROSPECTING") // PROSPECTING, QUALIFICATION, PROPOSAL, NEGOTIATION, CLOSED_WON, CLOSED_LOST
+  customerId String?
+  leadId     String?
+  branchId   String?
+  createdAt  DateTime @default(now())
+
+  customer Customer? @relation(fields: [customerId], references: [id])
+  lead     Lead?     @relation(fields: [leadId], references: [id])
+  branch   Branch?   @relation(fields: [branchId], references: [id])
+}
+
+model Department {
+  id       String  @id @default(cuid())
+  name     String
+  branchId String?
+  users    User[]
+}
+
+model Position {
+  id           String  @id @default(cuid())
+  title        String
+  departmentId String?
+  users        User[]
+}
+
+model LeaveRequest {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String // ANNUAL, SICK, MATERNITY
+  startDate    DateTime
+  endDate      DateTime
+  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  reason       String?
+  approvedById String?
+  createdAt    DateTime @default(now())
+
+  user       User  @relation(fields: [userId], references: [id])
+  approvedBy User? @relation("LeaveApprover", fields: [approvedById], references: [id])
+}
+
+model Attendance {
+  id        String    @id @default(cuid())
+  userId    String
+  date      DateTime  @default(now())
+  checkIn   DateTime?
+  checkOut  DateTime?
+  status    String    @default("PRESENT") // PRESENT, ABSENT, LATE, ON_LEAVE
+  method    String? // BIOMETRIC, QR, GPS, MANUAL
+  latitude  Float?
+  longitude Float?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+}
+
+model Payroll {
+  id         String   @id @default(cuid())
+  userId     String
+  month      Int
+  year       Int
+  basicPay   Float
+  allowances Float    @default(0)
+  deductions Float    @default(0) // PAYE, NSSF, NHIF
+  netPay     Float
+  status     String   @default("DRAFT") // DRAFT, PAID
+  payslipUrl String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 // ── System ────────────────────────────────────────────────────────────────────
@@ -753,8 +943,9 @@ model Supplier {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  branch    Branch?    @relation(fields: [branchId], references: [id])
-  purchases Purchase[]
+  branch           Branch?           @relation(fields: [branchId], references: [id])
+  purchases        Purchase[]
+  accountsPayables AccountsPayable[]
 
   @@index([branchId])
 }
@@ -831,7 +1022,248 @@ model PurchasePayment {
   purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
 }
 
-// ── Accounting ────────────────────────────────────────────────────────────────
+// ── Quotation ─────────────────────────────────────────────────────────────────
+
+model Quotation {
+  id              String  @id @default(cuid())
+  quotationNumber String
+  customerId      String?
+  branchId        String?
+  userId          String? // Salesperson
+
+  status     QuotationStatus @default(DRAFT)
+  validUntil DateTime?
+  notes      String?
+
+  subtotal Float @default(0)
+  discount Float @default(0)
+  tax      Float @default(0)
+  total    Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer    Customer?       @relation(fields: [customerId], references: [id])
+  branch      Branch?         @relation(fields: [branchId], references: [id])
+  user        User?           @relation(fields: [userId], references: [id])
+  items       QuotationItem[]
+  salesOrders SalesOrder[] // A quotation can become a Sales Order
+
+  @@unique([quotationNumber, branchId])
+}
+
+model QuotationItem {
+  id          String  @id @default(cuid())
+  quotationId String
+  productId   String?
+  productName String
+  sku         String
+  quantity    Int
+  unitPrice   Float
+  discount    Float   @default(0)
+  taxRate     Float   @default(0)
+  total       Float
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  product   Product?  @relation(fields: [productId], references: [id])
+}
+
+// ── Sales Order ───────────────────────────────────────────────────────────────
+
+model SalesOrder {
+  id          String  @id @default(cuid())
+  orderNumber String
+  customerId  String?
+  branchId    String?
+  userId      String?
+  quotationId String? // Link back to quotation
+
+  status       SalesOrderStatus @default(DRAFT)
+  orderDate    DateTime         @default(now())
+  expectedDate DateTime?
+
+  subtotal Float @default(0)
+  discount Float @default(0)
+  tax      Float @default(0)
+  total    Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer  Customer?  @relation(fields: [customerId], references: [id])
+  branch    Branch?    @relation(fields: [branchId], references: [id])
+  user      User?      @relation(fields: [userId], references: [id])
+  quotation Quotation? @relation(fields: [quotationId], references: [id])
+
+  items         SalesOrderItem[]
+  deliveryNotes DeliveryNote[]
+  invoices      Invoice[]
+
+  @@unique([orderNumber, branchId])
+}
+
+model SalesOrderItem {
+  id           String  @id @default(cuid())
+  salesOrderId String
+  productId    String?
+  productName  String
+  sku          String
+  quantity     Int
+  unitPrice    Float
+  discount     Float   @default(0)
+  taxRate      Float   @default(0)
+  total        Float
+  deliveredQty Int     @default(0) // Track partial deliveries
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  product    Product?   @relation(fields: [productId], references: [id])
+}
+
+// ── Delivery Note ─────────────────────────────────────────────────────────────
+
+model DeliveryNote {
+  id             String  @id @default(cuid())
+  deliveryNumber String
+  salesOrderId   String
+  branchId       String?
+  userId         String?
+
+  status       DeliveryStatus @default(PENDING)
+  deliveryDate DateTime?
+  notes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  salesOrder SalesOrder         @relation(fields: [salesOrderId], references: [id])
+  branch     Branch?            @relation(fields: [branchId], references: [id])
+  user       User?              @relation(fields: [userId], references: [id])
+  items      DeliveryNoteItem[]
+
+  @@unique([deliveryNumber, branchId])
+}
+
+model DeliveryNoteItem {
+  id             String  @id @default(cuid())
+  deliveryNoteId String
+  productId      String?
+  productName    String
+  sku            String
+  quantity       Int
+
+  deliveryNote DeliveryNote @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+  product      Product?     @relation(fields: [productId], references: [id])
+}
+
+// ── Invoice ───────────────────────────────────────────────────────────────────
+
+model Invoice {
+  id            String  @id @default(cuid())
+  invoiceNumber String
+  salesOrderId  String?
+  customerId    String?
+  branchId      String?
+  userId        String?
+
+  status    InvoiceStatus @default(DRAFT)
+  issueDate DateTime      @default(now())
+  dueDate   DateTime
+
+  subtotal   Float @default(0)
+  discount   Float @default(0)
+  tax        Float @default(0)
+  total      Float @default(0)
+  amountPaid Float @default(0)
+  balance    Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  salesOrder SalesOrder? @relation(fields: [salesOrderId], references: [id])
+  customer   Customer?   @relation(fields: [customerId], references: [id])
+  branch     Branch?     @relation(fields: [branchId], references: [id])
+  user       User?       @relation(fields: [userId], references: [id])
+
+  items              InvoiceItem[]
+  payments           InvoicePayment[]
+  accountsReceivable AccountsReceivable[]
+
+  @@unique([invoiceNumber, branchId])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  productId   String?
+  productName String
+  sku         String
+  quantity    Int
+  unitPrice   Float
+  discount    Float   @default(0)
+  taxRate     Float   @default(0)
+  total       Float
+
+  invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+}
+
+model InvoicePayment {
+  id        String        @id @default(cuid())
+  invoiceId String
+  amount    Float
+  method    PaymentMethod
+  reference String?
+  paidAt    DateTime      @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// ── Sales Returns ─────────────────────────────────────────────────────────────
+
+model SalesReturn {
+  id           String  @id @default(cuid())
+  returnNumber String
+  salesOrderId String?
+  invoiceId    String?
+  customerId   String?
+  branchId     String?
+  userId       String?
+
+  status     SalesReturnStatus @default(PENDING)
+  reason     String?
+  returnDate DateTime          @default(now())
+
+  subtotal Float @default(0)
+  tax      Float @default(0)
+  total    Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer Customer?         @relation(fields: [customerId], references: [id])
+  branch   Branch?           @relation(fields: [branchId], references: [id])
+  user     User?             @relation(fields: [userId], references: [id])
+  items    SalesReturnItem[]
+
+  @@unique([returnNumber, branchId])
+}
+
+model SalesReturnItem {
+  id            String  @id @default(cuid())
+  salesReturnId String
+  productId     String?
+  productName   String
+  sku           String
+  quantity      Int
+  unitPrice     Float
+  total         Float
+
+  salesReturn SalesReturn @relation(fields: [salesReturnId], references: [id], onDelete: Cascade)
+  product     Product?    @relation(fields: [productId], references: [id])
+}
+
+// Accounting
+
 model Accounting {
   id            String        @id @default(cuid())
   code          String // e.g. "1000", "4000"
@@ -902,4 +1334,225 @@ model JournalEntryLine {
 
   @@index([accountId])
   @@index([journalEntryId])
+}
+
+// Track outstanding customer invoices
+model AccountsReceivable {
+  id            String   @id @default(cuid())
+  customerId    String
+  invoiceNumber String   @unique
+  amount        Float
+  amountPaid    Float    @default(0)
+  balance       Float
+  dueDate       DateTime
+  status        String   @default("UNPAID") // UNPAID, PARTIAL, PAID, OVERDUE
+  branchId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customer  Customer    @relation(fields: [customerId], references: [id])
+  branch    Branch?     @relation(fields: [branchId], references: [id])
+  payments  ARPayment[]
+  invoice   Invoice?    @relation(fields: [invoiceId], references: [id])
+  invoiceId String?
+}
+
+model ARPayment {
+  id             String        @id @default(cuid())
+  arId           String
+  amount         Float
+  paymentDate    DateTime      @default(now())
+  method         PaymentMethod
+  reference      String? // Mpesa ref, cheque no
+  journalEntryId String? // Link to the GL entry
+
+  accountsReceivable AccountsReceivable @relation(fields: [arId], references: [id])
+}
+
+// Track bills you owe to suppliers
+model AccountsPayable {
+  id         String   @id @default(cuid())
+  supplierId String
+  billNumber String   @unique
+  amount     Float
+  amountPaid Float    @default(0)
+  balance    Float
+  dueDate    DateTime
+  status     String   @default("UNPAID") // UNPAID, PARTIAL, PAID, OVERDUE
+  branchId   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  supplier Supplier    @relation(fields: [supplierId], references: [id])
+  branch   Branch?     @relation(fields: [branchId], references: [id])
+  payments APPayment[]
+}
+
+model APPayment {
+  id             String               @id @default(cuid())
+  apId           String
+  amount         Float
+  paymentDate    DateTime             @default(now())
+  method         ExpensePaymentMethod
+  reference      String?
+  journalEntryId String?
+
+  accountsPayable AccountsPayable @relation(fields: [apId], references: [id])
+}
+
+// Fixed Assets and Depreciation
+
+model FixedAsset {
+  id                      String   @id @default(cuid())
+  name                    String
+  assetCode               String   @unique
+  category                String // IT, VEHICLE, FURNITURE
+  purchaseDate            DateTime
+  purchaseCost            Float
+  salvageValue            Float    @default(0)
+  usefulLifeYears         Int
+  depreciationMethod      String   @default("STRAIGHT_LINE") // STRAIGHT_LINE, REDUCING_BALANCE
+  accumulatedDepreciation Float    @default(0)
+  currentBookValue        Float
+  status                  String   @default("ACTIVE") // ACTIVE, DISPOSED, FULLY_DEPRECIATED
+  branchId                String?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  branch           Branch?           @relation(fields: [branchId], references: [id])
+  depreciationLogs DepreciationLog[]
+}
+
+model DepreciationLog {
+  id             String   @id @default(cuid())
+  fixedAssetId   String
+  amount         Float
+  date           DateTime @default(now())
+  journalEntryId String? // Link to the GL entry
+
+  fixedAsset FixedAsset @relation(fields: [fixedAssetId], references: [id])
+}
+
+// Bank Reconciliation
+model BankAccount {
+  id             String  @id @default(cuid())
+  accountName    String
+  accountNumber  String  @unique
+  bankName       String
+  currency       String  @default("KES")
+  currentBalance Float   @default(0)
+  branchId       String?
+  accountingId   String? // Link to the GL Account (e.g., 1010 Bank)
+
+  branch          Branch?              @relation(fields: [branchId], references: [id])
+  reconciliations BankReconciliation[]
+}
+
+model BankReconciliation {
+  id             String   @id @default(cuid())
+  bankAccountId  String
+  statementDate  DateTime
+  openingBalance Float
+  closingBalance Float
+  status         String   @default("DRAFT") // DRAFT, COMPLETED
+  createdAt      DateTime @default(now())
+
+  bankAccount BankAccount              @relation(fields: [bankAccountId], references: [id])
+  lines       BankReconciliationLine[]
+}
+
+model BankReconciliationLine {
+  id               String  @id @default(cuid())
+  reconciliationId String
+  journalEntryId   String? // Match to a GL entry
+  description      String
+  amount           Float
+  isReconciled     Boolean @default(false)
+
+  reconciliation BankReconciliation @relation(fields: [reconciliationId], references: [id])
+}
+
+// ── Asset Management ────────────────────────────────────────────────────────────────
+
+model Asset {
+  id               String   @id @default(cuid())
+  name             String
+  category         String // IT, VEHICLE, FURNITURE
+  purchaseDate     DateTime
+  purchaseCost     Float
+  currentValue     Float
+  depreciationRate Float    @default(0)
+  status           String   @default("ACTIVE") // ACTIVE, MAINTENANCE, DISPOSED
+  branchId         String?
+  assignedToId     String?
+
+  branch            Branch?            @relation(fields: [branchId], references: [id])
+  assignedTo        User?              @relation(fields: [assignedToId], references: [id])
+  assetMaintenances AssetMaintenance[]
+}
+
+model AssetMaintenance {
+  id          String   @id @default(cuid())
+  assetId     String
+  description String
+  cost        Float
+  date        DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id])
+}
+
+// ── Project Management ────────────────────────────────────────────────────────────────
+
+model Project {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  budget      Float     @default(0)
+  status      String    @default("ACTIVE") // PLANNING, ACTIVE, COMPLETED
+  branchId    String?
+
+  tasks ProjectTask[]
+}
+
+model ProjectTask {
+  id           String    @id @default(cuid())
+  projectId    String
+  title        String
+  assignedToId String?
+  status       String    @default("TODO") // TODO, IN_PROGRESS, DONE
+  dueDate      DateTime?
+
+  project    Project @relation(fields: [projectId], references: [id])
+  assignedTo User?   @relation(fields: [assignedToId], references: [id])
+}
+
+// ── Project Management ────────────────────────────────────────────────────────────────
+
+model Document {
+  id           String  @id @default(cuid())
+  name         String
+  fileUrl      String
+  fileType     String
+  version      Int     @default(1)
+  branchId     String?
+  uploadedById String?
+
+  branch     Branch? @relation(fields: [branchId], references: [id])
+  uploadedBy User?   @relation(fields: [uploadedById], references: [id])
+}
+
+model ApprovalRequest {
+  id            String   @id @default(cuid())
+  type          String // LEAVE, PURCHASE_ORDER, EXPENSE, SALARY_CHANGE
+  referenceId   String // ID of the related record
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  requestedById String
+  approvedById  String?
+  comments      String?
+  createdAt     DateTime @default(now())
+
+  requestedBy User  @relation("ApprovalRequester", fields: [requestedById], references: [id])
+  approvedBy  User? @relation("ApprovalApprover", fields: [approvedById], references: [id])
 }
