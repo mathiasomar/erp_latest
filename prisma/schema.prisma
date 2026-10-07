@@ -336,6 +336,9 @@ model User {
   invoices                 Invoice[]
   salesReturns             SalesReturn[]
 
+  twoFactorEnabled Boolean?    @default(false)
+  twofactors       TwoFactor[]
+
   @@unique([username])
   @@map("user")
 }
@@ -388,6 +391,19 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model TwoFactor {
+  id          String   @id
+  secret      String
+  backupCodes String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verified    Boolean? @default(true)
+
+  @@index([secret])
+  @@index([userId])
+  @@map("twoFactor")
 }
 
 // ── Products & Categories ─────────────────────────────────────────────────────
@@ -1337,6 +1353,7 @@ model JournalEntryLine {
 }
 
 // Track outstanding customer invoices
+
 model AccountsReceivable {
   id            String   @id @default(cuid())
   customerId    String
@@ -1370,6 +1387,7 @@ model ARPayment {
 }
 
 // Track bills you owe to suppliers
+
 model AccountsPayable {
   id         String   @id @default(cuid())
   supplierId String
@@ -1434,6 +1452,7 @@ model DepreciationLog {
 }
 
 // Bank Reconciliation
+
 model BankAccount {
   id             String  @id @default(cuid())
   accountName    String

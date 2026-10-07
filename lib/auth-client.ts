@@ -1,6 +1,7 @@
 import { createAuthClient } from "better-auth/react";
 import {
   inferAdditionalFields,
+  twoFactorClient,
   usernameClient,
 } from "better-auth/client/plugins";
 import type { auth } from "./auth";

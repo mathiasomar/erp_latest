@@ -7,6 +7,8 @@ import { headers } from "next/headers";
 import prisma from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
+import { sendEmail } from "@/lib/mail/send-email";
+import WelcomeEmail from "@/components/emails/WelcomeEmail";
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -125,6 +127,15 @@ export const createUser = async (values: CreateUserValues) => {
       role: parsed.data.role,
       branchId: parsed.data.branchId ?? null,
     },
+  });
+
+  await sendEmail({
+    to: parsed.data.email,
+    subject: "Welcome to O-ERP",
+    react: WelcomeEmail({
+      name: parsed.data.name,
+      loginUrl: "http://localhost:5000/sign-in",
+    }),
   });
 
   revalidatePath("/dashboard/users");
@@ -258,7 +269,10 @@ export const resetUserPassword = async (id: string, newPassword: string) => {
 
   // Generate a temporary password reset token or use a bypass method
   // For now, we'll skip this functionality as it requires auth library support
-  return { success: false, error: "Password reset requires auth library integration" };
+  return {
+    success: false,
+    error: "Password reset requires auth library integration",
+  };
 };
 
 // ── Delete ────────────────────────────────────────────────────────────────────

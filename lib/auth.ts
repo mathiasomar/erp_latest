@@ -7,6 +7,7 @@ import { normalizeName } from "./utils";
 import { ActivityAction, UserRole } from "@/generated/prisma/enums";
 import { logActivity } from "./activity-logger";
 import { username } from "better-auth/plugins/username";
+import { twoFactor } from "better-auth/plugins/two-factor";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -15,6 +16,8 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     autoSignIn: false,
+    // TODO:
+    // requireEmailConfirmation: true,
   },
   session: {
     expiresIn: 60 * 30, // 30 minutes in seconds
