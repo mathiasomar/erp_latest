@@ -4,6 +4,7 @@ import { useProfile, useProfileStats } from "@/hooks/use-profile";
 
 import { EditProfileForm } from "@/components/profile/EditProfileForm";
 import { ChangePasswordForm } from "@/components/profile/ChangePasswordForm";
+import { TwoFactorToggle } from "@/components/profile/TwoFactorToggle";
 import { ActivityLogRow } from "@/components/activity/ActivityLogRow";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -254,6 +255,8 @@ export default function ProfilePage() {
 
         {/* Right column */}
         <div className="space-y-4">
+          <TwoFactorToggle />
+
           {/* Account details */}
           <Card>
             <CardHeader className="pb-2">

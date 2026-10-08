@@ -19,7 +19,11 @@ const formSchema = z.object({
 });
 
 const SignInForm = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [requiresOtp, setRequiresOtp] = useState(false);
+  const [otp, setOtp] = useState("");
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -30,6 +34,36 @@ const SignInForm = () => {
     },
   });
 
+  const finishSignIn = (roleValue?: string | null, username?: string | null) => {
+    const role = roleValue?.toUpperCase() ?? "CASHIER";
+    toast.success(
+      `Logged in successfully! Welcome back, ${username ?? "user"} (${role})!`,
+    );
+    if (role === "CASHIER") {
+      router.push("/dashboard/pos");
+    } else {
+      router.push("/dashboard");
+    }
+  };
+
+  const sendOtp = async () => {
+    try {
+      const result = await authClient.twoFactor.sendOtp({});
+      if (result.error) {
+        toast.error(
+          result.error.message || "Could not send a verification code",
+        );
+        return false;
+      }
+      toast.success("A verification code was sent to your email");
+      return true;
+    } catch (error) {
+      console.error("Failed to send sign-in OTP", error);
+      toast.error("Could not send a verification code. Please try again.");
+      return false;
+    }
+  };
+
   const onSubmit = async (formData: z.infer<typeof formSchema>) => {
     await authClient.signIn.username(
       {
@@ -38,83 +72,174 @@ const SignInForm = () => {
       },
       {
         onRequest: () => {
-          setIsLoading(true);
+          setIsSigningIn(true);
         },
-        onSuccess: (ctx) => {
-          const role =
-            (ctx.data.user.role as string | undefined)?.toUpperCase() ??
-            "CASHIER";
-          toast.success(
-            `Logged in successfully! Welcome back, ${ctx.data.user.username} (${role})!`,
-          );
-          // Cashier → POS directly, everyone else → dashboard
-          if (role === "CASHIER") {
-            router.push("/dashboard/pos");
-          } else {
-            router.push("/dashboard");
+        onSuccess: async (ctx) => {
+          if (
+            "twoFactorRedirect" in ctx.data &&
+            ctx.data.twoFactorRedirect
+          ) {
+            setIsSigningIn(false);
+            setRequiresOtp(true);
+            await sendOtp();
+            return;
           }
+
+          setIsSigningIn(false);
+          finishSignIn(ctx.data.user.role, ctx.data.user.username);
         },
         onError: (ctx) => {
           toast.error(ctx.error.message || "Invalid credentials! Try again.");
-          setIsLoading(false);
-        },
-        onSettled: () => {
-          setIsLoading(false);
+          setIsSigningIn(false);
         },
       },
     );
   };
+
+  const onVerifyOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsVerifyingOtp(true);
+    try {
+      const result = await authClient.twoFactor.verifyOtp({ code: otp.trim() });
+      if (result.error) {
+        toast.error(result.error.message || "Invalid verification code");
+        return;
+      }
+      if (!result.data) {
+        toast.error("Could not verify the code. Please try again.");
+        return;
+      }
+      finishSignIn(result.data.user.role, result.data.user.username);
+    } catch (error) {
+      console.error("Failed to verify sign-in OTP", error);
+      toast.error("Could not verify the code. Please try again.");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  const onResendOtp = async () => {
+    setIsSendingOtp(true);
+    try {
+      await sendOtp();
+    } catch (error) {
+      console.error("Failed to resend sign-in OTP", error);
+      toast.error("Could not resend the verification code. Please try again.");
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
   return (
     <div className="w-full">
-      <h1 className="text-md font-semibold my-4">Sign In to your account</h1>
-      <form id="login_form" onSubmit={form.handleSubmit(onSubmit)}>
-        <FieldGroup>
-          <Controller
-            name="username"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="username">Username</FieldLabel>
+      {requiresOtp ? (
+        <>
+          <h1 className="text-md font-semibold my-4">
+            Enter your verification code
+          </h1>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Check your registered email for the one-time code.
+          </p>
+          <form onSubmit={onVerifyOtp}>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="sign-in-otp">Verification code</FieldLabel>
                 <Input
-                  {...field}
-                  id="username"
+                  id="sign-in-otp"
                   type="text"
-                  aria-invalid={fieldState.invalid}
-                  placeholder="Enter your username"
-                  autoComplete="off"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(event) =>
+                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  placeholder="Enter 6-digit code"
+                  required
                 />
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
-                )}
               </Field>
-            )}
-          />
-          <Controller
-            name="password"
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="password">Password</FieldLabel>
-                <Input
-                  {...field}
-                  id="password"
-                  type="password"
-                  aria-invalid={fieldState.invalid}
-                  placeholder="Enter your password"
-                  autoComplete="off"
-                />
-                {fieldState.invalid && (
-                  <FieldError errors={[fieldState.error]} />
+              <Button
+                type="submit"
+                disabled={isVerifyingOtp || otp.trim().length !== 6}
+                className="w-full"
+              >
+                {isVerifyingOtp ? (
+                  <Spinner />
+                ) : (
+                  <LogIn className="mr-2" size={16} />
                 )}
-              </Field>
-            )}
-          />
-          <Button type="submit" disabled={isLoading} className="w-full">
-            {isLoading ? <Spinner /> : <LogIn className="mr-2" size={16} />}
-            {isLoading ? "Signing In..." : "Sign In"}
-          </Button>
-        </FieldGroup>
-      </form>
+                {isVerifyingOtp ? "Verifying..." : "Verify and sign in"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSendingOtp}
+                onClick={onResendOtp}
+                className="w-full"
+              >
+                {isSendingOtp ? <Spinner /> : null}
+                {isSendingOtp ? "Sending..." : "Resend code"}
+              </Button>
+            </FieldGroup>
+          </form>
+        </>
+      ) : (
+        <>
+          <h1 className="text-md font-semibold my-4">Sign In to your account</h1>
+          <form id="login_form" onSubmit={form.handleSubmit(onSubmit)}>
+            <FieldGroup>
+              <Controller
+                name="username"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="username">Username</FieldLabel>
+                    <Input
+                      {...field}
+                      id="username"
+                      type="text"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="Enter your username"
+                      autoComplete="username"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              <Controller
+                name="password"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="password">Password</FieldLabel>
+                    <Input
+                      {...field}
+                      id="password"
+                      type="password"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+              <Button type="submit" disabled={isSigningIn} className="w-full">
+                {isSigningIn ? (
+                  <Spinner />
+                ) : (
+                  <LogIn className="mr-2" size={16} />
+                )}
+                {isSigningIn ? "Signing In..." : "Sign In"}
+              </Button>
+            </FieldGroup>
+          </form>
+        </>
+      )}
     </div>
   );
 };

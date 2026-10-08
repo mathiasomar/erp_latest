@@ -30,6 +30,7 @@ import NextImage from "next/image";
 import { cn } from "@/lib/utils";
 import { EditProfileForm } from "./EditProfileForm";
 import { ChangePasswordForm } from "./ChangePasswordForm";
+import { TwoFactorToggle } from "./TwoFactorToggle";
 import Link from "next/link";
 
 const roleConfig: Record<
@@ -188,7 +189,10 @@ export const ProfileSheet = ({ open, onClose }: Props) => {
 
             <TabsContent value="edit" className="p-6 mt-0">
               {profile ? (
-                <EditProfileForm user={profile} onSuccess={onClose} />
+                <div className="space-y-6">
+                  <EditProfileForm user={profile} onSuccess={onClose} />
+                  <TwoFactorToggle />
+                </div>
               ) : (
                 <Skeleton className="h-48 rounded-xl" />
               )}

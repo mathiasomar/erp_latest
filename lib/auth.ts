@@ -8,6 +8,8 @@ import { ActivityAction, UserRole } from "@/generated/prisma/enums";
 import { logActivity } from "./activity-logger";
 import { username } from "better-auth/plugins/username";
 import { twoFactor } from "better-auth/plugins/two-factor";
+import OtpEmail from "@/components/emails/OtpEmail";
+import { sendEmail } from "@/lib/mail/send-email";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -189,5 +191,21 @@ export const auth = betterAuth({
       isActive: { type: "boolean", defaultValue: true },
     },
   },
-  plugins: [nextCookies(), username()],
+  plugins: [
+    nextCookies(),
+    username(),
+    twoFactor({
+      skipVerificationOnEnable: true,
+      otpOptions: {
+        period: 10,
+        async sendOTP({ user, otp }) {
+          await sendEmail({
+            to: user.email,
+            subject: "Your O-ERP verification code",
+            react: OtpEmail({ otp }),
+          });
+        },
+      },
+    }),
+  ],
 });

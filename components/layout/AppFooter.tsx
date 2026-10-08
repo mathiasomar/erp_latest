@@ -7,7 +7,7 @@ export function AppFooter() {
     <footer className="border-t bg-background mt-4">
       <div className="flex min-h-14 flex-col items-center justify-between gap-2 px-2 py-3 text-sm text-muted-foreground sm:flex-row">
         <div className="text-center sm:text-left">
-          © {year} O-POS System. All rights reserved.
+          © {year} O-ERP System. All rights reserved.
         </div>
 
         <div className="flex items-center gap-4">
@@ -17,7 +17,7 @@ export function AppFooter() {
           </span>
           <span className="hidden sm:inline">•</span>
 
-          <span>Version 1.0.0</span>
+          <span>Version 1.0.2</span>
         </div>
       </div>
     </footer>
