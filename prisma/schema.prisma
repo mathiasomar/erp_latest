@@ -233,6 +233,22 @@ enum SalesReturnStatus {
   REFUNDED
 }
 
+enum DocumentType {
+  ORDER
+  RECEIPT
+  LAYAWAY
+  PURCHASE
+  GRN
+  QUOTATION
+  SALES_ORDER
+  DELIVERY_NOTE
+  INVOICE
+  SALES_RETURN
+  STOCK_TRANSFER
+  JOURNAL_ENTRY
+  FIXED_ASSET
+}
+
 // ── Branch ────────────────────────────────────────────────────────────────────
 // Defined first — everything else references it
 
@@ -248,34 +264,31 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users               User[]
-  products            Product[]
-  categories          Category[]
-  orders              Order[]
-  expenses            Expense[]
-  customers           Customer[]
-  stocks              Stock[]
-  expenseCategories   ExpenseCategory[]
-  mpesaTransactions   MpesaTransaction[]
-  layaways            Layaway[]
-  receipts            Receipt[]
-  suppliers           Supplier[]
-  purchases           Purchase[]
-  accountings         Accounting[]
-  journalEntries      JournalEntry[]
-  leads               Lead[]
-  opportunities       Opportunity[]
-  assets              Asset[]
-  documents           Document[]
-  accountsReceivables AccountsReceivable[]
-  accountsPayables    AccountsPayable[]
-  fixedAssets         FixedAsset[]
-  bankAccounts        BankAccount[]
-  quotations          Quotation[]
-  salesOrders         SalesOrder[]
-  deliveryNotes       DeliveryNote[]
-  invoices            Invoice[]
-  salesReturns        SalesReturn[]
+  users             User[]
+  products          Product[]
+  categories        Category[]
+  orders            Order[]
+  expenses          Expense[]
+  customers         Customer[]
+  stocks            Stock[]
+  expenseCategories ExpenseCategory[]
+  mpesaTransactions MpesaTransaction[]
+  layaways          Layaway[]
+  receipts          Receipt[]
+  suppliers         Supplier[]
+  purchases         Purchase[]
+  journalEntries    JournalEntry[]
+  leads             Lead[]
+  opportunities     Opportunity[]
+  documents         Document[]
+  fixedAssets       FixedAsset[]
+  bankAccounts      BankAccount[]
+  quotations        Quotation[]
+  salesOrders       SalesOrder[]
+  deliveryNotes     DeliveryNote[]
+  invoices          Invoice[]
+  salesReturns      SalesReturn[]
+  documentSequences DocumentSequence[]
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -325,7 +338,6 @@ model User {
   approvedLeaveRequests    LeaveRequest[]    @relation("LeaveApprover")
   attendances              Attendance[]
   payrolls                 Payroll[]
-  assets                   Asset[]
   projectTasks             ProjectTask[]
   documents                Document[]
   approvalRequests         ApprovalRequest[] @relation("ApprovalRequester")
@@ -336,8 +348,9 @@ model User {
   invoices                 Invoice[]
   salesReturns             SalesReturn[]
 
-  twoFactorEnabled Boolean?    @default(false)
+  twoFactorEnabled Boolean?     @default(false)
   twofactors       TwoFactor[]
+  fixedAssets      FixedAsset[]
 
   @@unique([username])
   @@map("user")
@@ -427,7 +440,7 @@ model Product {
   id               String    @id @default(cuid())
   name             String
   sku              String
-  barcode          String?   @unique
+  barcode          String?
   qrCode           String? // For QR Code scanning
   batchNumber      String? // For Batch tracking
   expiryDate       DateTime? // For Expiry tracking
@@ -460,7 +473,7 @@ model Product {
   salesReturnItems  SalesReturnItem[]
 
   // SKU unique per branch
-  @@unique([sku, branchId])
+  @@unique([sku, barcode, branchId])
 }
 
 // ── Orders ────────────────────────────────────────────────────────────────────
@@ -558,6 +571,7 @@ model StockLog {
   createdAt      DateTime              @default(now())
   userId         String?
   user           User?                 @relation(fields: [userId], references: [id])
+  purchaseItem   PurchaseItem?         @relation(fields: [purchaseItemId], references: [id])
 
   purchaseItemId String?
 
@@ -636,17 +650,16 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  branch              Branch?              @relation(fields: [branchId], references: [id])
-  orders              Order[]
-  pointLogs           LoyaltyLog[]
-  layaways            Layaway[]
-  receipts            Receipt[]
-  opportunities       Opportunity[]
-  accountsReceivables AccountsReceivable[]
-  quotations          Quotation[]
-  salesOrders         SalesOrder[]
-  invoices            Invoice[]
-  salesReturns        SalesReturn[]
+  branch        Branch?       @relation(fields: [branchId], references: [id])
+  orders        Order[]
+  pointLogs     LoyaltyLog[]
+  layaways      Layaway[]
+  receipts      Receipt[]
+  opportunities Opportunity[]
+  quotations    Quotation[]
+  salesOrders   SalesOrder[]
+  invoices      Invoice[]
+  salesReturns  SalesReturn[]
 
   // phone unique per branch
   // email unique per branch
@@ -959,9 +972,8 @@ model Supplier {
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
-  branch           Branch?           @relation(fields: [branchId], references: [id])
-  purchases        Purchase[]
-  accountsPayables AccountsPayable[]
+  branch    Branch?    @relation(fields: [branchId], references: [id])
+  purchases Purchase[]
 
   @@index([branchId])
 }
@@ -1022,8 +1034,9 @@ model PurchaseItem {
   // Update product cost price on receive?
   updateCostPrice Boolean @default(true)
 
-  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  product  Product? @relation(fields: [productId], references: [id])
+  purchase  Purchase   @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product   Product?   @relation(fields: [productId], references: [id])
+  stockLogs StockLog[]
 }
 
 model PurchasePayment {
@@ -1044,7 +1057,7 @@ model Quotation {
   id              String  @id @default(cuid())
   quotationNumber String
   customerId      String?
-  branchId        String?
+  branchId        String
   userId          String? // Salesperson
 
   status     QuotationStatus @default(DRAFT)
@@ -1060,7 +1073,7 @@ model Quotation {
   updatedAt DateTime @updatedAt
 
   customer    Customer?       @relation(fields: [customerId], references: [id])
-  branch      Branch?         @relation(fields: [branchId], references: [id])
+  branch      Branch          @relation(fields: [branchId], references: [id])
   user        User?           @relation(fields: [userId], references: [id])
   items       QuotationItem[]
   salesOrders SalesOrder[] // A quotation can become a Sales Order
@@ -1090,7 +1103,7 @@ model SalesOrder {
   id          String  @id @default(cuid())
   orderNumber String
   customerId  String?
-  branchId    String?
+  branchId    String
   userId      String?
   quotationId String? // Link back to quotation
 
@@ -1107,13 +1120,14 @@ model SalesOrder {
   updatedAt DateTime @updatedAt
 
   customer  Customer?  @relation(fields: [customerId], references: [id])
-  branch    Branch?    @relation(fields: [branchId], references: [id])
+  branch    Branch     @relation(fields: [branchId], references: [id])
   user      User?      @relation(fields: [userId], references: [id])
   quotation Quotation? @relation(fields: [quotationId], references: [id])
 
   items         SalesOrderItem[]
   deliveryNotes DeliveryNote[]
   invoices      Invoice[]
+  salesReturns  SalesReturn[]
 
   @@unique([orderNumber, branchId])
 }
@@ -1141,7 +1155,7 @@ model DeliveryNote {
   id             String  @id @default(cuid())
   deliveryNumber String
   salesOrderId   String
-  branchId       String?
+  branchId       String
   userId         String?
 
   status       DeliveryStatus @default(PENDING)
@@ -1152,7 +1166,7 @@ model DeliveryNote {
   updatedAt DateTime @updatedAt
 
   salesOrder SalesOrder         @relation(fields: [salesOrderId], references: [id])
-  branch     Branch?            @relation(fields: [branchId], references: [id])
+  branch     Branch             @relation(fields: [branchId], references: [id])
   user       User?              @relation(fields: [userId], references: [id])
   items      DeliveryNoteItem[]
 
@@ -1178,7 +1192,7 @@ model Invoice {
   invoiceNumber String
   salesOrderId  String?
   customerId    String?
-  branchId      String?
+  branchId      String
   userId        String?
 
   status    InvoiceStatus @default(DRAFT)
@@ -1197,12 +1211,12 @@ model Invoice {
 
   salesOrder SalesOrder? @relation(fields: [salesOrderId], references: [id])
   customer   Customer?   @relation(fields: [customerId], references: [id])
-  branch     Branch?     @relation(fields: [branchId], references: [id])
+  branch     Branch      @relation(fields: [branchId], references: [id])
   user       User?       @relation(fields: [userId], references: [id])
 
-  items              InvoiceItem[]
-  payments           InvoicePayment[]
-  accountsReceivable AccountsReceivable[]
+  items        InvoiceItem[]
+  payments     InvoicePayment[]
+  salesReturns SalesReturn[]
 
   @@unique([invoiceNumber, branchId])
 }
@@ -1242,7 +1256,7 @@ model SalesReturn {
   salesOrderId String?
   invoiceId    String?
   customerId   String?
-  branchId     String?
+  branchId     String
   userId       String?
 
   status     SalesReturnStatus @default(PENDING)
@@ -1256,10 +1270,12 @@ model SalesReturn {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  customer Customer?         @relation(fields: [customerId], references: [id])
-  branch   Branch?           @relation(fields: [branchId], references: [id])
-  user     User?             @relation(fields: [userId], references: [id])
-  items    SalesReturnItem[]
+  customer   Customer?         @relation(fields: [customerId], references: [id])
+  branch     Branch            @relation(fields: [branchId], references: [id])
+  user       User?             @relation(fields: [userId], references: [id])
+  salesOrder SalesOrder?       @relation(fields: [salesOrderId], references: [id])
+  invoice    Invoice?          @relation(fields: [invoiceId], references: [id])
+  items      SalesReturnItem[]
 
   @@unique([returnNumber, branchId])
 }
@@ -1280,27 +1296,25 @@ model SalesReturnItem {
 
 // Accounting
 
-model Accounting {
+model LedgerAccount {
   id            String        @id @default(cuid())
-  code          String // e.g. "1000", "4000"
-  name          String // e.g. "Cash", "Sales Revenue"
+  code          String        @unique
+  name          String
   type          AccountType
   normalBalance NormalBalance
   description   String?
-  parentId      String? // for sub-accounts
+  parentId      String?
   isActive      Boolean       @default(true)
-  isSystem      Boolean       @default(false) // system accounts can't be deleted
-  branchId      String?
+  isSystem      Boolean       @default(false)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  branch   Branch?            @relation(fields: [branchId], references: [id])
-  parent   Accounting?        @relation("AccountHierarchy", fields: [parentId], references: [id])
-  children Accounting[]       @relation("AccountHierarchy")
+  parent   LedgerAccount?     @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children LedgerAccount[]    @relation("AccountHierarchy")
   lines    JournalEntryLine[]
 
-  @@unique([code, branchId])
   @@index([type])
+  @@map("Accounting")
 }
 
 model JournalEntry {
@@ -1312,7 +1326,7 @@ model JournalEntry {
   status       JournalEntryStatus @default(DRAFT)
   source       JournalEntrySource @default(MANUAL)
   sourceId     String? // id of the order/purchase/expense
-  branchId     String?
+  branchId     String
   userId       String?
   postedAt     DateTime?
   postedById   String?
@@ -1323,7 +1337,7 @@ model JournalEntry {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
-  branch            Branch?            @relation(fields: [branchId], references: [id])
+  branch            Branch             @relation(fields: [branchId], references: [id])
   user              User?              @relation(fields: [userId], references: [id])
   postedBy          User?              @relation("JournalPostedBy", fields: [postedById], references: [id])
   reversedBy        User?              @relation("JournalReversedBy", fields: [reversedById], references: [id])
@@ -1345,100 +1359,49 @@ model JournalEntryLine {
   description    String?
   createdAt      DateTime @default(now())
 
-  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
-  account      Accounting   @relation(fields: [accountId], references: [id])
+  journalEntry JournalEntry  @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      LedgerAccount @relation(fields: [accountId], references: [id])
 
   @@index([accountId])
   @@index([journalEntryId])
-}
-
-// Track outstanding customer invoices
-
-model AccountsReceivable {
-  id            String   @id @default(cuid())
-  customerId    String
-  invoiceNumber String   @unique
-  amount        Float
-  amountPaid    Float    @default(0)
-  balance       Float
-  dueDate       DateTime
-  status        String   @default("UNPAID") // UNPAID, PARTIAL, PAID, OVERDUE
-  branchId      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  customer  Customer    @relation(fields: [customerId], references: [id])
-  branch    Branch?     @relation(fields: [branchId], references: [id])
-  payments  ARPayment[]
-  invoice   Invoice?    @relation(fields: [invoiceId], references: [id])
-  invoiceId String?
-}
-
-model ARPayment {
-  id             String        @id @default(cuid())
-  arId           String
-  amount         Float
-  paymentDate    DateTime      @default(now())
-  method         PaymentMethod
-  reference      String? // Mpesa ref, cheque no
-  journalEntryId String? // Link to the GL entry
-
-  accountsReceivable AccountsReceivable @relation(fields: [arId], references: [id])
-}
-
-// Track bills you owe to suppliers
-
-model AccountsPayable {
-  id         String   @id @default(cuid())
-  supplierId String
-  billNumber String   @unique
-  amount     Float
-  amountPaid Float    @default(0)
-  balance    Float
-  dueDate    DateTime
-  status     String   @default("UNPAID") // UNPAID, PARTIAL, PAID, OVERDUE
-  branchId   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  supplier Supplier    @relation(fields: [supplierId], references: [id])
-  branch   Branch?     @relation(fields: [branchId], references: [id])
-  payments APPayment[]
-}
-
-model APPayment {
-  id             String               @id @default(cuid())
-  apId           String
-  amount         Float
-  paymentDate    DateTime             @default(now())
-  method         ExpensePaymentMethod
-  reference      String?
-  journalEntryId String?
-
-  accountsPayable AccountsPayable @relation(fields: [apId], references: [id])
 }
 
 // Fixed Assets and Depreciation
 
 model FixedAsset {
   id                      String   @id @default(cuid())
+  assetCode               String
   name                    String
-  assetCode               String   @unique
   category                String // IT, VEHICLE, FURNITURE
   purchaseDate            DateTime
   purchaseCost            Float
   salvageValue            Float    @default(0)
   usefulLifeYears         Int
-  depreciationMethod      String   @default("STRAIGHT_LINE") // STRAIGHT_LINE, REDUCING_BALANCE
+  depreciationMethod      String   @default("STRAIGHT_LINE")
   accumulatedDepreciation Float    @default(0)
   currentBookValue        Float
-  status                  String   @default("ACTIVE") // ACTIVE, DISPOSED, FULLY_DEPRECIATED
-  branchId                String?
+  status                  String   @default("ACTIVE") // ACTIVE, MAINTENANCE, DISPOSED, FULLY_DEPRECIATED
+  branchId                String
+  assignedToId            String?
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
-  branch           Branch?           @relation(fields: [branchId], references: [id])
+  branch           Branch                  @relation(fields: [branchId], references: [id])
+  assignedTo       User?                   @relation(fields: [assignedToId], references: [id])
   depreciationLogs DepreciationLog[]
+  maintenances     FixedAssetMaintenance[]
+
+  @@unique([assetCode, branchId])
+}
+
+model FixedAssetMaintenance {
+  id           String   @id @default(cuid())
+  fixedAssetId String
+  description  String
+  cost         Float
+  date         DateTime @default(now())
+
+  fixedAsset FixedAsset @relation(fields: [fixedAssetId], references: [id], onDelete: Cascade)
 }
 
 model DepreciationLog {
@@ -1489,35 +1452,6 @@ model BankReconciliationLine {
   isReconciled     Boolean @default(false)
 
   reconciliation BankReconciliation @relation(fields: [reconciliationId], references: [id])
-}
-
-// ── Asset Management ────────────────────────────────────────────────────────────────
-
-model Asset {
-  id               String   @id @default(cuid())
-  name             String
-  category         String // IT, VEHICLE, FURNITURE
-  purchaseDate     DateTime
-  purchaseCost     Float
-  currentValue     Float
-  depreciationRate Float    @default(0)
-  status           String   @default("ACTIVE") // ACTIVE, MAINTENANCE, DISPOSED
-  branchId         String?
-  assignedToId     String?
-
-  branch            Branch?            @relation(fields: [branchId], references: [id])
-  assignedTo        User?              @relation(fields: [assignedToId], references: [id])
-  assetMaintenances AssetMaintenance[]
-}
-
-model AssetMaintenance {
-  id          String   @id @default(cuid())
-  assetId     String
-  description String
-  cost        Float
-  date        DateTime @default(now())
-
-  asset Asset @relation(fields: [assetId], references: [id])
 }
 
 // ── Project Management ────────────────────────────────────────────────────────────────
@@ -1574,4 +1508,17 @@ model ApprovalRequest {
 
   requestedBy User  @relation("ApprovalRequester", fields: [requestedById], references: [id])
   approvedBy  User? @relation("ApprovalApprover", fields: [approvedById], references: [id])
+}
+
+model DocumentSequence {
+  id         String       @id @default(cuid())
+  type       DocumentType
+  branchId   String
+  year       Int          @default(0) // 0 = never resets
+  nextNumber Int          @default(1)
+  updatedAt  DateTime     @updatedAt
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([type, branchId, year])
 }
