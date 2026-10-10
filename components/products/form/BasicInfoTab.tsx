@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Wand2 } from "lucide-react";
-import { generateBarcode, generateSKU } from "@/lib/barcode";
+import { generateBarcode, generateQRCode, generateSKU } from "@/lib/barcode";
 
 type Props = {
   form: UseFormReturn<ProductFormValues>;
@@ -50,61 +50,71 @@ export function BasicInfoTab({ form, categories }: Props) {
       shouldTouch: true,
     });
   };
-  return (
-    <FieldGroup className="space-y-4">
-      {/* Name */}
-      <Controller
-        name="name"
-        control={form.control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor="name">
-              Product Name <span className="text-destructive">*</span>
-            </FieldLabel>
-            <Input
-              {...field}
-              id="name"
-              aria-invalid={fieldState.invalid}
-              placeholder="e.g. Bottled Water 500ml"
-              autoComplete="off"
-            />
-            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-          </Field>
-        )}
-      />
 
-      {/* Category */}
-      <Controller
-        name="categoryId"
-        control={form.control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor="categoryId">Category</FieldLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: cat.color ?? "#6b7280" }}
-                      />
-                      {cat.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-          </Field>
-        )}
-      />
+  const handleGenerateQRCode = () => {
+    form.setValue("qrCode", generateQRCode(), {
+      shouldValidate: true,
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  };
+  return (
+    <FieldGroup className="gap-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Name */}
+        <Controller
+          name="name"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="name">
+                Product Name <span className="text-destructive">*</span>
+              </FieldLabel>
+              <Input
+                {...field}
+                id="name"
+                aria-invalid={fieldState.invalid}
+                placeholder="e.g. Bottled Water 500ml"
+                autoComplete="off"
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+
+        {/* Category */}
+        <Controller
+          name="categoryId"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="categoryId">Category</FieldLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: cat.color ?? "#6b7280" }}
+                        />
+                        {cat.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+      </div>
 
       {/* SKU + Barcode */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Controller
           name="sku"
           control={form.control}
@@ -171,24 +181,109 @@ export function BasicInfoTab({ form, categories }: Props) {
         />
       </div>
 
-      {/* Image URL */}
-      <Controller
-        name="imageUrl"
-        control={form.control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor="imageUrl">Image URL</FieldLabel>
-            <Input
-              {...field}
-              id="imageUrl"
-              aria-invalid={fieldState.invalid}
-              placeholder="https://example.com/image.jpg"
-              autoComplete="off"
-            />
-            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-          </Field>
-        )}
-      />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Controller
+          name="brand"
+          control={form.control}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel htmlFor="brand">Brand</FieldLabel>
+              <Input {...field} id="brand" placeholder="e.g. Acme" />
+            </Field>
+          )}
+        />
+        <Controller
+          name="unit"
+          control={form.control}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel htmlFor="unit">Unit</FieldLabel>
+              <Input {...field} id="unit" placeholder="e.g. pcs, kg, box" />
+            </Field>
+          )}
+        />
+        <Controller
+          name="batchNumber"
+          control={form.control}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel htmlFor="batchNumber">Batch Number</FieldLabel>
+              <Input {...field} id="batchNumber" placeholder="Optional" />
+            </Field>
+          )}
+        />
+        <Controller
+          name="expiryDate"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="expiryDate">Expiry Date</FieldLabel>
+              <Input
+                {...field}
+                id="expiryDate"
+                type="date"
+                aria-invalid={fieldState.invalid}
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Controller
+          name="qrCode"
+          control={form.control}
+          render={({ field }) => (
+            <Field>
+              <FieldLabel htmlFor="qrCode">QR Code Value</FieldLabel>
+              <div className="relative">
+                <Input
+                  {...field}
+                  id="qrCode"
+                  placeholder="Scan or enter QR code value"
+                  autoComplete="off"
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  onClick={handleGenerateQRCode}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7
+                    text-muted-foreground hover:text-foreground"
+                  title="Auto-generate QR code value"
+                  aria-label="Auto-generate QR code value"
+                >
+                  <Wand2 size={14} />
+                </Button>
+              </div>
+              <FieldDescription>
+                Use this value to look up the product when scanned.
+              </FieldDescription>
+            </Field>
+          )}
+        />
+
+        {/* Image URL */}
+        <Controller
+          name="imageUrl"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="imageUrl">Image URL</FieldLabel>
+              <Input
+                {...field}
+                id="imageUrl"
+                aria-invalid={fieldState.invalid}
+                placeholder="https://example.com/image.jpg"
+                autoComplete="off"
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+      </div>
 
       {/* Active toggle */}
       <Controller

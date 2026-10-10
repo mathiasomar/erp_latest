@@ -136,11 +136,30 @@ export const useExportProducts = () => {
         sections: [
           {
             title: "Products",
-            headers: ["Name", "SKU", "Category", "Price", "Stock", "Active"],
+            headers: [
+              "Name",
+              "SKU",
+              "Barcode",
+              "QR Code",
+              "Brand",
+              "Batch",
+              "Expiry",
+              "Unit",
+              "Category",
+              "Price",
+              "Stock",
+              "Active",
+            ],
             rows: data.map(
               (p: {
                 name: string;
                 sku: string;
+                barcode?: string | null;
+                qrCode?: string | null;
+                brand?: string | null;
+                batchNumber?: string | null;
+                expiryDate?: string | null;
+                unit?: string | null;
                 category?: { name: string } | null;
                 price: number;
                 stock?: { quantity: number } | null;
@@ -148,6 +167,14 @@ export const useExportProducts = () => {
               }) => [
                 p.name,
                 p.sku,
+                p.barcode ?? "",
+                p.qrCode ?? "",
+                p.brand ?? "",
+                p.batchNumber ?? "",
+                p.expiryDate
+                  ? new Date(p.expiryDate).toLocaleDateString()
+                  : "",
+                p.unit ?? "pcs",
                 p.category?.name ?? "—",
                 `KES ${p.price.toLocaleString()}`,
                 p.stock?.quantity ?? 0,

@@ -28,6 +28,9 @@ export const getProducts = async (search?: string, categoryId?: string) => {
           { name: { contains: search, mode: "insensitive" } },
           { sku: { contains: search, mode: "insensitive" } },
           { barcode: { contains: search, mode: "insensitive" } },
+          { qrCode: { contains: search, mode: "insensitive" } },
+          { batchNumber: { contains: search, mode: "insensitive" } },
+          { brand: { contains: search, mode: "insensitive" } },
         ],
       }),
     },
@@ -70,6 +73,13 @@ export const createProduct = async (values: ProductFormValues) => {
       branchId: ctx.branchId,
       imageUrl: productData.imageUrl || null,
       barcode: productData.barcode || null,
+      qrCode: productData.qrCode?.trim() || null,
+      batchNumber: productData.batchNumber?.trim() || null,
+      expiryDate: productData.expiryDate
+        ? new Date(`${productData.expiryDate}T00:00:00.000Z`)
+        : null,
+      unit: productData.unit?.trim() || "pcs",
+      brand: productData.brand?.trim() || null,
       stock: {
         create: {
           quantity: stock.quantity,
@@ -124,6 +134,13 @@ export const updateProduct = async (id: string, values: ProductFormValues) => {
       ...productData,
       imageUrl: productData.imageUrl || null,
       barcode: productData.barcode || null,
+      qrCode: productData.qrCode?.trim() || null,
+      batchNumber: productData.batchNumber?.trim() || null,
+      expiryDate: productData.expiryDate
+        ? new Date(`${productData.expiryDate}T00:00:00.000Z`)
+        : null,
+      unit: productData.unit?.trim() || "pcs",
+      brand: productData.brand?.trim() || null,
       stock: {
         upsert: {
           create: {

@@ -26,3 +26,10 @@ export const generateSKU = (): string => {
 
   return `${timestamp}${random}`;
 };
+
+export const generateQRCode = (): string => {
+  const timestamp = Date.now().toString().slice(-8);
+  const random = getRandomInt(1000, 9999).toString();
+
+  return `QR-${timestamp}${random}`;
+};

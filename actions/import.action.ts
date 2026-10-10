@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import { requireBranchContext } from "@/lib/branch-context";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
-import { generateBarcode, generateSKU } from "@/lib/barcode";
+import { generateBarcode } from "@/lib/barcode";
 
 // ── Row schema — every column is optional so we can give per-row errors ───────
 
@@ -14,6 +14,11 @@ const importRowSchema = z.object({
   name: z.string().min(1, "Name is required"),
   sku: z.string().trim().min(1, "SKU is required"),
   barcode: z.string().trim().optional().default(""),
+  qrCode: z.string().trim().optional(),
+  batchNumber: z.string().trim().optional(),
+  expiryDate: z.union([z.iso.date(), z.literal("")]).optional(),
+  unit: z.string().trim().optional(),
+  brand: z.string().trim().optional(),
   price: z.coerce.number().min(0, "Price must be ≥ 0"),
   lastPrice: z.coerce.number().min(0).optional().default(0),
   costPrice: z.coerce.number().min(0).optional().default(0),
@@ -175,6 +180,19 @@ export const importProducts = async (
       imageUrl: data.imageUrl?.trim() || null,
       categoryId,
       branchId: ctx.branchId,
+      ...(data.qrCode !== undefined && {
+        qrCode: data.qrCode || null,
+      }),
+      ...(data.batchNumber !== undefined && {
+        batchNumber: data.batchNumber || null,
+      }),
+      ...(data.expiryDate !== undefined && {
+        expiryDate: data.expiryDate
+          ? new Date(`${data.expiryDate}T00:00:00.000Z`)
+          : null,
+      }),
+      ...(data.unit !== undefined && { unit: data.unit || "pcs" }),
+      ...(data.brand !== undefined && { brand: data.brand || null }),
     };
 
     const existingId = skuMap.get(resolvedSku.toLowerCase().trim());

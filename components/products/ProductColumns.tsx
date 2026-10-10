@@ -7,43 +7,33 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpDown, Eye, Pencil } from "lucide-react";
 import { Product } from "@/types";
 import Link from "next/link";
-import { useState } from "react";
-import { EditProductSheet } from "./EditProductSheet";
 import { usePermissions } from "@/hooks/use-permissions";
 
 const ProductActionsCell = ({ product }: { product: Product }) => {
-  const [editOpen, setEditOpen] = useState(false);
   const { can } = usePermissions();
   return (
-    <>
-      <div className="flex items-center gap-1">
-        {/* View — all roles */}
-        <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
-          <Link href={`/dashboard/products/${product.id}`}>
-            <Eye size={14} />
+    <div className="flex items-center gap-1">
+      {/* View — all roles */}
+      <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+        <Link href={`/dashboard/products/${product.id}`}>
+          <Eye size={14} />
+        </Link>
+      </Button>
+      {/* Edit — ADMIN and MANAGER only */}
+      {can("products.edit") && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          title="Edit product"
+          asChild
+        >
+          <Link href={`/dashboard/products/${product.id}/edit`}>
+            <Pencil size={14} />
           </Link>
         </Button>
-        {/* Edit — ADMIN and MANAGER only */}
-        {can("products.edit") && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            title="Edit product"
-            onClick={() => setEditOpen(true)}
-          >
-            <Pencil size={14} />
-          </Button>
-        )}
-      </div>
-      {can("products.edit") && (
-        <EditProductSheet
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-          product={product}
-        />
       )}
-    </>
+    </div>
   );
 };
 
@@ -114,6 +104,27 @@ export const columns: ColumnDef<Product>[] = [
     },
   },
 
+  {
+    accessorKey: "brand",
+    header: "Brand",
+    cell: ({ row }) => row.original.brand || "—",
+  },
+
+  {
+    accessorKey: "batchNumber",
+    header: "Batch",
+    cell: ({ row }) => row.original.batchNumber || "—",
+  },
+
+  {
+    accessorKey: "expiryDate",
+    header: "Expiry",
+    cell: ({ row }) =>
+      row.original.expiryDate
+        ? new Date(row.original.expiryDate).toLocaleDateString()
+        : "—",
+  },
+
   // ── Category ──────────────────────────────────────────────────────────────
   {
     accessorKey: "category.name",
@@ -174,7 +185,9 @@ export const columns: ColumnDef<Product>[] = [
             isLow && !isEmpty ? "border-orange-400 text-orange-600" : ""
           }
         >
-          {isEmpty ? "Out of stock" : `${qty} units`}
+          {isEmpty
+            ? "Out of stock"
+            : `${qty} ${row.original.unit || "pcs"}`}
         </Badge>
       );
     },

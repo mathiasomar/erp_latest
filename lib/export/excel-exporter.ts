@@ -85,6 +85,12 @@ export const productsToRows = (products: ProductExport[]): SheetData => ({
     [
       "Name",
       "SKU",
+      "Barcode",
+      "QR Code",
+      "Batch Number",
+      "Expiry Date",
+      "Unit",
+      "Brand",
       "Category",
       "Price",
       "Cost Price",
@@ -97,13 +103,19 @@ export const productsToRows = (products: ProductExport[]): SheetData => ({
     ...products.map((p) => [
       p.name,
       p.sku,
+      p.barcode ?? "",
+      p.qrCode ?? "",
+      p.batchNumber ?? "",
+      p.expiryDate ?? "",
+      p.unit ?? "pcs",
+      p.brand ?? "",
       p.category?.name ?? "—",
       p.price,
       p.costPrice ?? "—",
       p.stock?.quantity ?? 0,
       p.stock?.lowStockAt ?? 0,
       p.taxRate ?? 0,
-      p.discount ?? 0,
+      p.discountRate ?? 0,
       p.isActive ? "Yes" : "No",
     ]),
   ],
@@ -200,10 +212,16 @@ type OrderExport = {
 type ProductExport = {
   name: string;
   sku: string;
+  barcode?: string | null;
+  qrCode?: string | null;
+  batchNumber?: string | null;
+  expiryDate?: string | null;
+  unit?: string | null;
+  brand?: string | null;
   price: number;
   costPrice?: number | null;
   taxRate?: number | null;
-  discount?: number | null;
+  discountRate?: number | null;
   isActive: boolean;
   category: { name: string } | null;
   stock: { quantity: number; lowStockAt: number } | null;

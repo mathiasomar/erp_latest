@@ -23,7 +23,9 @@ export async function fetchProductById(id: string) {
 }
 
 export async function fetchProductByBarcode(barcode: string) {
-  const { data } = await api.get<Product>(`/api/products/barcode/${barcode}`);
+  const { data } = await api.get<Product>(
+    `/api/products/barcode/${encodeURIComponent(barcode)}`,
+  );
   return data;
 }
 

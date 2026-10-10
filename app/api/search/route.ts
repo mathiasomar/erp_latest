@@ -18,6 +18,10 @@ export const GET = async (req: NextRequest) => {
           OR: [
             { name: { contains: q, mode: "insensitive" } },
             { sku: { contains: q, mode: "insensitive" } },
+            { barcode: { contains: q, mode: "insensitive" } },
+            { qrCode: { contains: q, mode: "insensitive" } },
+            { batchNumber: { contains: q, mode: "insensitive" } },
+            { brand: { contains: q, mode: "insensitive" } },
           ],
         },
         select: {

@@ -281,6 +281,11 @@ export function ImportProductsDialog({ open, onClose }: Props) {
       name: "",
       sku: "",
       barcode: "",
+      qrCode: "",
+      batchNumber: "",
+      expiryDate: "",
+      unit: "pcs",
+      brand: "",
       price: 0,
       lastPrice: 0,
       costPrice: 0,
@@ -447,6 +452,12 @@ export function ImportProductsDialog({ open, onClose }: Props) {
                   {[
                     { col: "name", req: true, desc: "Product name" },
                     { col: "sku", req: true, desc: "Unique code" },
+                    { col: "barcode", req: false, desc: "Barcode" },
+                    { col: "qrCode", req: false, desc: "QR code value" },
+                    { col: "batchNumber", req: false, desc: "Batch number" },
+                    { col: "expiryDate", req: false, desc: "Expiry (YYYY-MM-DD)" },
+                    { col: "unit", req: false, desc: "Unit of measure" },
+                    { col: "brand", req: false, desc: "Brand name" },
                     { col: "price", req: true, desc: "Selling price" },
                     {
                       col: "lastPrice",
@@ -615,6 +626,7 @@ export function ImportProductsDialog({ open, onClose }: Props) {
                         {[
                           { key: "name", label: "Name *", w: "160px" },
                           { key: "sku", label: "SKU", w: "110px" },
+                          { key: "brand", label: "Brand", w: "110px" },
                           { key: "price", label: "Price", w: "80px" },
                           { key: "lastPrice", label: "Min Price", w: "80px" },
                           { key: "costPrice", label: "Cost", w: "80px" },
@@ -622,6 +634,10 @@ export function ImportProductsDialog({ open, onClose }: Props) {
                           { key: "quantity", label: "Qty", w: "60px" },
                           { key: "lowStockAt", label: "Alert", w: "60px" },
                           { key: "barcode", label: "Barcode", w: "110px" },
+                          { key: "qrCode", label: "QR Code", w: "120px" },
+                          { key: "batchNumber", label: "Batch", w: "110px" },
+                          { key: "expiryDate", label: "Expiry", w: "120px" },
+                          { key: "unit", label: "Unit", w: "70px" },
                           { key: "isActive", label: "Active", w: "70px" },
                           { key: "discountRate", label: "Disc %", w: "60px" },
                           { key: "taxRate", label: "Tax %", w: "60px" },
@@ -646,7 +662,7 @@ export function ImportProductsDialog({ open, onClose }: Props) {
                       {rows.length === 0 && (
                         <tr>
                           <td
-                            colSpan={14}
+                            colSpan={19}
                             className="px-4 py-10 text-center
                                      text-muted-foreground text-sm"
                           >
@@ -718,6 +734,19 @@ export function ImportProductsDialog({ open, onClose }: Props) {
                               onBlur={handleBlur}
                               placeholder="Auto-generate"
                               className={cn(CELL_INPUT, "font-mono")}
+                            />
+                          </td>
+
+                          {/* Brand */}
+                          <td className="px-1 py-1">
+                            <Input
+                              value={String(row.brand ?? "")}
+                              onChange={(e) =>
+                                updateCell(row._id, "brand", e.target.value)
+                              }
+                              onBlur={handleBlur}
+                              placeholder="Brand"
+                              className={CELL_INPUT}
                             />
                           </td>
 
@@ -853,6 +882,66 @@ export function ImportProductsDialog({ open, onClose }: Props) {
                               onBlur={handleBlur}
                               placeholder="Auto-generate"
                               className={cn(CELL_INPUT, "font-mono")}
+                            />
+                          </td>
+
+                          {/* QR code */}
+                          <td className="px-1 py-1">
+                            <Input
+                              value={String(row.qrCode ?? "")}
+                              onChange={(e) =>
+                                updateCell(row._id, "qrCode", e.target.value)
+                              }
+                              onBlur={handleBlur}
+                              placeholder="QR code value"
+                              className={cn(CELL_INPUT, "font-mono")}
+                            />
+                          </td>
+
+                          {/* Batch number */}
+                          <td className="px-1 py-1">
+                            <Input
+                              value={String(row.batchNumber ?? "")}
+                              onChange={(e) =>
+                                updateCell(
+                                  row._id,
+                                  "batchNumber",
+                                  e.target.value,
+                                )
+                              }
+                              onBlur={handleBlur}
+                              placeholder="Batch"
+                              className={cn(CELL_INPUT, "font-mono")}
+                            />
+                          </td>
+
+                          {/* Expiry date */}
+                          <td className="px-1 py-1">
+                            <Input
+                              type="date"
+                              value={String(row.expiryDate ?? "")}
+                              onChange={(e) =>
+                                updateCell(
+                                  row._id,
+                                  "expiryDate",
+                                  e.target.value,
+                                )
+                              }
+                              onBlur={handleBlur}
+                              className={CELL_INPUT}
+                            />
+                          </td>
+
+                          {/* Unit */}
+                          <td className="px-1 py-1">
+                            <Input
+                              value={String(row.unit ?? "")}
+                              onChange={(e) =>
+                                updateCell(row._id, "unit", e.target.value)
+                              }
+                              onBlur={handleBlur}
+                              placeholder="pcs"
+                              className={CELL_INPUT}
                             />
                           </td>
 

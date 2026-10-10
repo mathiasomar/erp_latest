@@ -1,17 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { productSchema, ProductFormValues } from "@/lib/validations/product";
 import { Product } from "@/types";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,16 +15,25 @@ import { useUpdateProduct } from "@/hooks/use-product";
 import { BasicInfoTab } from "./form/BasicInfoTab";
 import { PricingTab } from "./form/PricingTab";
 import { StockTab } from "./form/StockTab";
+import Link from "next/link";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
-type Props = {
-  open: boolean;
-  onClose: () => void;
-  product: Product;
-};
+const toDateInputValue = (value: Date | string | null) =>
+  value ? new Date(value).toISOString().slice(0, 10) : "";
 
-export function EditProductSheet({ open, onClose, product }: Props) {
+export function EditProductForm({ product }: { product: Product }) {
+  const router = useRouter();
   const { data: categories = [] } = useCategories();
-  const { mutate, isPending } = useUpdateProduct(product.id, onClose);
+  const { mutate, isPending } = useUpdateProduct(product.id, () =>
+    router.push(`/dashboard/products/${product.id}`),
+  );
 
   const form = useForm<ProductFormValues, unknown, ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -38,6 +41,11 @@ export function EditProductSheet({ open, onClose, product }: Props) {
       name: product.name,
       sku: product.sku,
       barcode: product.barcode ?? "",
+      qrCode: product.qrCode ?? "",
+      batchNumber: product.batchNumber ?? "",
+      expiryDate: toDateInputValue(product.expiryDate),
+      unit: product.unit ?? "pcs",
+      brand: product.brand ?? "",
       price: product.price,
       lastPrice: product.lastPrice ?? 0,
       costPrice: product.costPrice ?? 0,
@@ -62,6 +70,11 @@ export function EditProductSheet({ open, onClose, product }: Props) {
         name: product.name,
         sku: product.sku,
         barcode: product.barcode ?? "",
+        qrCode: product.qrCode ?? "",
+        batchNumber: product.batchNumber ?? "",
+        expiryDate: toDateInputValue(product.expiryDate),
+        unit: product.unit ?? "pcs",
+        brand: product.brand ?? "",
         price: product.price,
         lastPrice: product.lastPrice ?? 0,
         costPrice: product.costPrice ?? 0,
@@ -84,28 +97,44 @@ export function EditProductSheet({ open, onClose, product }: Props) {
     mutate(values);
   }
 
-  function handleClose() {
-    form.reset();
-    onClose();
-  }
-
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-4">
-        <SheetHeader className="mb-4">
-          <SheetTitle>Edit Product</SheetTitle>
-          <SheetDescription>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard/products">Products</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/dashboard/products/${product.id}`}>
+              {product.name}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Edit</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <header>
+        <h1 className="text-2xl font-bold">Edit Product</h1>
+        <p className="text-sm text-muted-foreground mt-1">
             Update the details for{" "}
             <span className="font-medium text-foreground">{product.name}</span>.
             Fields marked <span className="text-destructive">*</span> are
             required.
-          </SheetDescription>
-        </SheetHeader>
+        </p>
+      </header>
 
-        <Separator className="mb-4" />
+      <Separator />
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Tabs defaultValue="basic">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Tabs defaultValue="basic" className="space-y-5">
             <TabsList className="w-full">
               <TabsTrigger value="basic" className="flex-1">
                 Basic Info
@@ -118,13 +147,13 @@ export function EditProductSheet({ open, onClose, product }: Props) {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="basic" className="mt-4">
+            <TabsContent value="basic" className="mt-0">
               <BasicInfoTab form={form} categories={categories} />
             </TabsContent>
-            <TabsContent value="pricing" className="mt-4">
+            <TabsContent value="pricing" className="mt-0">
               <PricingTab form={form} />
             </TabsContent>
-            <TabsContent value="stock" className="mt-4">
+            <TabsContent value="stock" className="mt-0">
               <StockTab form={form} />
             </TabsContent>
           </Tabs>
@@ -139,13 +168,8 @@ export function EditProductSheet({ open, onClose, product }: Props) {
           )}
 
           <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={handleClose}
-            >
-              Cancel
+            <Button type="button" variant="outline" asChild>
+              <Link href={`/dashboard/products/${product.id}`}>Cancel</Link>
             </Button>
             <Button
               type="submit"
@@ -156,8 +180,7 @@ export function EditProductSheet({ open, onClose, product }: Props) {
               {isPending ? "Saving..." : "Save Changes"}
             </Button>
           </div>
-        </form>
-      </SheetContent>
-    </Sheet>
+      </form>
+    </div>
   );
 }

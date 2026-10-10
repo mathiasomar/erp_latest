@@ -5,14 +5,19 @@ import { Separator } from "@/components/ui/separator";
 import {
   Tag,
   Barcode,
+  QrCode,
   Package,
   DollarSign,
   Layers,
   ToggleLeft,
   ImageIcon,
+  CalendarDays,
+  Hash,
+  Clock3,
 } from "lucide-react";
 import Link from "next/link";
 import { BarcodeDisplay } from "@/components/BarcodeDisplay";
+import { format } from "date-fns";
 
 type Props = {
   product: Product;
@@ -48,6 +53,10 @@ export const ProductDetails = ({ product }: Props) => {
     product.costPrice > 0 && product.price > 0
       ? (((product.price - product.costPrice) / product.price) * 100).toFixed(1)
       : null;
+  const formatCurrency = (amount: number) =>
+    `KES ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatDateTime = (value?: Date | string) =>
+    value ? format(new Date(value), "dd MMM yyyy, HH:mm") : "—";
 
   return (
     <Card>
@@ -89,6 +98,46 @@ export const ProductDetails = ({ product }: Props) => {
             </div>
           </>
         )}
+
+        {product.qrCode && (
+          <DetailRow
+            icon={QrCode}
+            label="QR Code"
+            value={
+              <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded max-w-40 truncate">
+                {product.qrCode}
+              </span>
+            }
+          />
+        )}
+
+        {product.brand && (
+          <DetailRow icon={Tag} label="Brand" value={product.brand} />
+        )}
+
+        {product.batchNumber && (
+          <DetailRow
+            icon={Hash}
+            label="Batch Number"
+            value={
+              <span className="font-mono text-xs">{product.batchNumber}</span>
+            }
+          />
+        )}
+
+        {product.expiryDate && (
+          <DetailRow
+            icon={CalendarDays}
+            label="Expiry Date"
+            value={new Date(product.expiryDate).toLocaleDateString()}
+          />
+        )}
+
+        <DetailRow
+          icon={Package}
+          label="Unit"
+          value={product.unit || "pcs"}
+        />
 
         <DetailRow
           icon={Layers}
@@ -134,13 +183,19 @@ export const ProductDetails = ({ product }: Props) => {
         <DetailRow
           icon={DollarSign}
           label="Cost Price"
-          value={
-            product.costPrice > 0 ? (
-              `KES ${product.costPrice.toLocaleString()}`
-            ) : (
-              <span className="text-muted-foreground text-xs">—</span>
-            )
-          }
+          value={formatCurrency(product.costPrice)}
+        />
+
+        <DetailRow
+          icon={DollarSign}
+          label="Cost Price (Incl. Tax)"
+          value={formatCurrency(product.costPriceInclTax)}
+        />
+
+        <DetailRow
+          icon={Tag}
+          label="Purchase Tax Rate"
+          value={`${product.purchaseTaxRate}%`}
         />
 
         {margin && (
@@ -159,28 +214,28 @@ export const ProductDetails = ({ product }: Props) => {
           />
         )}
 
-        {(product.discountRate ?? 0) > 0 && (
-          <DetailRow
-            icon={Tag}
-            label="Discount"
-            value={
+        <DetailRow
+          icon={Tag}
+          label="Discount"
+          value={
+            (product.discountRate ?? 0) > 0 ? (
               <Badge
                 variant="outline"
                 className="text-orange-600 border-orange-300"
               >
                 {product.discountRate}% off
               </Badge>
-            }
-          />
-        )}
+            ) : (
+              "0%"
+            )
+          }
+        />
 
-        {(product.taxRate ?? 0) > 0 && (
-          <DetailRow
-            icon={Tag}
-            label="Tax Rate"
-            value={`${product.taxRate}%`}
-          />
-        )}
+        <DetailRow
+          icon={Tag}
+          label="Selling Tax Rate"
+          value={`${product.taxRate ?? 0}%`}
+        />
 
         <Separator className="my-1" />
 
@@ -196,7 +251,9 @@ export const ProductDetails = ({ product }: Props) => {
                 isLow && !isEmpty ? "border-orange-400 text-orange-600" : ""
               }
             >
-              {isEmpty ? "Out of stock" : `${stockQty} units`}
+              {isEmpty
+                ? "Out of stock"
+                : `${stockQty} ${product.unit || "pcs"}`}
             </Badge>
           }
         />
@@ -237,6 +294,27 @@ export const ProductDetails = ({ product }: Props) => {
             }
           />
         )}
+
+        <Separator className="my-1" />
+
+        <DetailRow
+          icon={CalendarDays}
+          label="Created"
+          value={
+            <span className="text-xs">
+              {formatDateTime(product.createdAt)}
+            </span>
+          }
+        />
+        <DetailRow
+          icon={Clock3}
+          label="Last Updated"
+          value={
+            <span className="text-xs">
+              {formatDateTime(product.updatedAt)}
+            </span>
+          }
+        />
       </CardContent>
     </Card>
   );

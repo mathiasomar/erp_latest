@@ -4,6 +4,11 @@ export const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   sku: z.string().min(1, "SKU is required"),
   barcode: z.string().optional(),
+  qrCode: z.string().optional(),
+  batchNumber: z.string().optional(),
+  expiryDate: z.union([z.iso.date(), z.literal("")]).optional(),
+  unit: z.string().optional(),
+  brand: z.string().optional(),
   price: z.number().min(0, "Price must be ≥ 0"),
   lastPrice: z.number().min(0),
   costPrice: z.number().min(0), // excl. tax

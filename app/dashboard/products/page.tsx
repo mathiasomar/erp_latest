@@ -1,7 +1,6 @@
 "use client";
 
 import { BranchLabel } from "@/components/layout/BranchLabel";
-import { AddProductSheet } from "@/components/products/AddProductSheet";
 import { ImportProductsDialog } from "@/components/products/ImportProductDialog";
 import { columns } from "@/components/products/ProductColumns";
 import { DataTable } from "@/components/products/ProductDatatable";
@@ -19,10 +18,10 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useAllProducts } from "@/hooks/use-product";
 import { Plus, Upload } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
 const ProductsPage = () => {
   const { data: products = [], isLoading } = useAllProducts();
-  const [sheetOpen, setSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
   const { can } = usePermissions();
@@ -52,8 +51,10 @@ const ProductsPage = () => {
         {/* Only ADMIN and MANAGER see Add Product */}
         {can("products.create") && (
           <div className="flex gap-2">
-            <Button onClick={() => setSheetOpen(true)}>
-              <Plus size={15} className="mr-1" /> Add Product
+            <Button asChild>
+              <Link href="/dashboard/products/new">
+                <Plus size={15} className="mr-1" /> Add Product
+              </Link>
             </Button>
 
             {/* Import button */}
@@ -77,16 +78,10 @@ const ProductsPage = () => {
       )}
 
       {can("products.create") && (
-        <>
-          <AddProductSheet
-            open={sheetOpen}
-            onClose={() => setSheetOpen(false)}
-          />
-          <ImportProductsDialog
-            open={importOpen}
-            onClose={() => setImportOpen(false)}
-          />
-        </>
+        <ImportProductsDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+        />
       )}
     </div>
   );

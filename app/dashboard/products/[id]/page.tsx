@@ -16,8 +16,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { useState } from "react";
-import { EditProductSheet } from "@/components/products/EditProductSheet";
 import { StockCard } from "@/components/products/view/StockCard";
 import { useProduct } from "@/hooks/use-product";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -25,7 +23,6 @@ import { usePermissions } from "@/hooks/use-permissions";
 export default function ProductViewPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [editOpen, setEditOpen] = useState(false);
 
   const { data: product, isLoading } = useProduct(id);
 
@@ -116,8 +113,10 @@ export default function ProductViewPage() {
         </div>
 
         {can("products.edit") && (
-          <Button onClick={() => setEditOpen(true)}>
-            <Pencil size={14} className="mr-1.5" /> Edit Product
+          <Button asChild>
+            <Link href={`/dashboard/products/${product.id}/edit`}>
+              <Pencil size={14} className="mr-1.5" /> Edit Product
+            </Link>
           </Button>
         )}
       </div>
@@ -136,15 +135,6 @@ export default function ProductViewPage() {
           <ProductDetails product={product} />
         </div>
       </div>
-
-      {/* Edit sheet */}
-      {can("products.edit") && product && (
-        <EditProductSheet
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-          product={product}
-        />
-      )}
     </div>
   );
 }

@@ -18,10 +18,6 @@ export function PricingTab({ form }: Props) {
   const price =
     useWatch({ control: form.control, name: "price", defaultValue: 0 }) ?? 0;
 
-  const lastPrice =
-    useWatch({ control: form.control, name: "lastPrice", defaultValue: 0 }) ??
-    0;
-
   const costPrice =
     useWatch({ control: form.control, name: "costPrice", defaultValue: 0 }) ??
     0;
@@ -30,13 +26,6 @@ export function PricingTab({ form }: Props) {
     useWatch({
       control: form.control,
       name: "purchaseTaxRate",
-      defaultValue: 0,
-    }) ?? 0;
-
-  const costPriceInclTax =
-    useWatch({
-      control: form.control,
-      name: "costPriceInclTax",
       defaultValue: 0,
     }) ?? 0;
 
@@ -90,74 +79,71 @@ export function PricingTab({ form }: Props) {
   };
 
   return (
-    <FieldGroup className="space-y-4">
-      {/* Selling Price */}
-      <Controller
-        name="price"
-        control={form.control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor="price">
-              Selling Price (KES) <span className="text-destructive">*</span>
-            </FieldLabel>
+    <FieldGroup className="gap-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Selling Price */}
+        <Controller
+          name="price"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="price">
+                Selling Price (KES) <span className="text-destructive">*</span>
+              </FieldLabel>
+              <Input
+                {...field}
+                id="price"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="0.00"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  field.onChange(val === "" ? "" : e.target.valueAsNumber);
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === "") field.onChange(0);
+                  field.onBlur();
+                }}
+              />
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
 
-            <Input
-              {...field}
-              id="price"
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="0.00"
-              onChange={(e) => {
-                const val = e.target.value;
-                field.onChange(val === "" ? "" : e.target.valueAsNumber);
-              }}
-              onBlur={(e) => {
-                if (e.target.value === "") field.onChange(0);
-                field.onBlur();
-              }}
-            />
-
-            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-          </Field>
-        )}
-      />
-
-      {/* Minimum Price */}
-      <Controller
-        name="lastPrice"
-        control={form.control}
-        render={({ field, fieldState }) => (
-          <Field data-invalid={fieldState.invalid}>
-            <FieldLabel htmlFor="lastPrice">
-              Last Price/Minimum Price (KES)
-            </FieldLabel>
-
-            <Input
-              {...field}
-              id="lastPrice"
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="0.00"
-              onChange={(e) => {
-                const val = e.target.value;
-                field.onChange(val === "" ? "" : e.target.valueAsNumber);
-              }}
-              onBlur={(e) => {
-                if (e.target.value === "") field.onChange(0);
-                field.onBlur();
-              }}
-            />
-
-            <FieldDescription>
-              Lowest price allowed during bargaining.
-            </FieldDescription>
-
-            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-          </Field>
-        )}
-      />
+        {/* Minimum Price */}
+        <Controller
+          name="lastPrice"
+          control={form.control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="lastPrice">
+                Last Price/Minimum Price (KES)
+              </FieldLabel>
+              <Input
+                {...field}
+                id="lastPrice"
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="0.00"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  field.onChange(val === "" ? "" : e.target.valueAsNumber);
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === "") field.onChange(0);
+                  field.onBlur();
+                }}
+              />
+              <FieldDescription>
+                Lowest price allowed during bargaining.
+              </FieldDescription>
+              {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+            </Field>
+          )}
+        />
+      </div>
 
       <Separator />
 
@@ -165,8 +151,9 @@ export function PricingTab({ form }: Props) {
         Purchase / Cost Price
       </p>
 
-      {/* Purchase Tax */}
-      <Controller
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Purchase Tax */}
+        <Controller
         name="purchaseTaxRate"
         control={form.control}
         render={({ field, fieldState }) => (
@@ -196,10 +183,10 @@ export function PricingTab({ form }: Props) {
             <FieldDescription>VAT charged by the supplier.</FieldDescription>
           </Field>
         )}
-      />
+        />
 
-      {/* Cost Excluding Tax */}
-      <Controller
+        {/* Cost Excluding Tax */}
+        <Controller
         name="costPrice"
         control={form.control}
         render={({ field, fieldState }) => (
@@ -230,10 +217,10 @@ export function PricingTab({ form }: Props) {
             {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
           </Field>
         )}
-      />
+        />
 
-      {/* Cost Including Tax */}
-      <Controller
+        {/* Cost Including Tax */}
+        <Controller
         name="costPriceInclTax"
         control={form.control}
         render={({ field, fieldState }) => (
@@ -257,7 +244,7 @@ export function PricingTab({ form }: Props) {
                 if (e.target.value === "") handleInclChange(0);
                 field.onBlur();
               }}
-            />
+              />
 
             <FieldDescription>
               Automatically syncs with exclusive cost.
@@ -267,9 +254,11 @@ export function PricingTab({ form }: Props) {
           </Field>
         )}
       />
+      </div>
 
-      {/* Selling Tax */}
-      <Controller
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Selling Tax */}
+        <Controller
         name="taxRate"
         control={form.control}
         render={({ field, fieldState }) => (
@@ -292,7 +281,7 @@ export function PricingTab({ form }: Props) {
                 if (e.target.value === "") field.onChange(0);
                 field.onBlur();
               }}
-            />
+              />
 
             <FieldDescription>
               Tax charged when selling the product.
@@ -300,10 +289,11 @@ export function PricingTab({ form }: Props) {
           </Field>
         )}
       />
+      </div>
 
       {/* Preview */}
       {price > 0 && (
-        <div className="rounded-lg border bg-muted/40 p-4 grid grid-cols-4 gap-4 text-center text-sm">
+        <div className="rounded-lg border bg-muted/40 p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-sm">
           <div>
             <p className="text-muted-foreground text-xs">Selling</p>
             <p className="font-bold">KES {price.toLocaleString()}</p>

@@ -14,12 +14,10 @@ export async function GET(
 
     const { code } = await params;
 
-    // barcode + branchId together — use findFirst since it's not a
-    // unique constraint by itself (only sku+branchId is compound unique)
     const product = await prisma.product.findFirst({
       where: {
-        barcode: code,
         branchId: ctx.branchId,
+        OR: [{ barcode: code }, { qrCode: code }],
       },
       include: { category: true, stock: true },
     });

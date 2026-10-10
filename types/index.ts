@@ -22,6 +22,11 @@ export type Product = {
   name: string;
   sku: string;
   barcode: string | null;
+  qrCode: string | null;
+  batchNumber: string | null;
+  expiryDate: Date | string | null;
+  unit: string | null;
+  brand: string | null;
   price: number;
   lastPrice: number;
   costPrice: number;
@@ -29,6 +34,8 @@ export type Product = {
   purchaseTaxRate: number;
   imageUrl: string | null;
   isActive: boolean;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
   categoryId: string | null;
   category: Category | null;
   stock: Stock | null;

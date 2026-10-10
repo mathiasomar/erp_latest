@@ -29,8 +29,9 @@ export function StockTab({ form }: Props) {
   const isLow = qty > 0 && qty <= lowAt;
 
   return (
-    <FieldGroup className="space-y-4">
-      {/* Opening stock */}
+    <FieldGroup className="gap-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Opening stock */}
       <Controller
         name="stock.quantity"
         control={form.control}
@@ -102,6 +103,7 @@ export function StockTab({ form }: Props) {
           </Field>
         )}
       />
+      </div>
 
       {/* Stock status preview */}
       <div className="rounded-lg border bg-muted/40 p-4 space-y-1 text-sm">
