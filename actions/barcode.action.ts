@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { requireBranchContext } from "@/lib/branch-context";
+import { serializeProduct } from "@/lib/product-serialization";
 
 export const getProductByBarcode = async (barcode: string) => {
   const ctx = await requireBranchContext();
@@ -18,5 +19,5 @@ export const getProductByBarcode = async (barcode: string) => {
     },
   });
 
-  return { product: product ?? null };
+  return { product: product ? serializeProduct(product) : null };
 };

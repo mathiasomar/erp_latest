@@ -6,19 +6,21 @@ import prisma from "@/lib/prisma";
 import { ProductFormValues, productSchema } from "@/lib/validations/product";
 import { revalidatePath } from "next/cache";
 import { requireBranchContext } from "@/lib/branch-context";
+import { serializeProduct } from "@/lib/product-serialization";
 
 export const getAllProducts = async () => {
   const ctx = await requireBranchContext();
-  return prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where: { branchId: ctx.branchId },
     include: { category: true, stock: true },
     orderBy: { createdAt: "desc" },
   });
+  return products.map(serializeProduct);
 };
 
 export const getProducts = async (search?: string, categoryId?: string) => {
   const ctx = await requireBranchContext();
-  return prisma.product.findMany({
+  const products = await prisma.product.findMany({
     where: {
       branchId: ctx.branchId,
       isActive: true,
@@ -37,6 +39,7 @@ export const getProducts = async (search?: string, categoryId?: string) => {
     include: { category: true, stock: true },
     orderBy: { name: "asc" },
   });
+  return products.map(serializeProduct);
 };
 
 export const getCategories = async () => {
@@ -97,11 +100,11 @@ export const createProduct = async (values: ProductFormValues) => {
     entityLabel: product.name,
     userId: ctx.userId,
     branchId: ctx.branchId,
-    meta: { sku: product.sku, price: product.price },
+    meta: { sku: product.sku, price: product.price.toNumber() },
   });
 
   revalidatePath("/dashboard/products");
-  return { success: true, product };
+  return { success: true, product: serializeProduct(product) };
 };
 
 export const updateProduct = async (id: string, values: ProductFormValues) => {
@@ -166,7 +169,7 @@ export const updateProduct = async (id: string, values: ProductFormValues) => {
 
   revalidatePath("/dashboard/products");
   revalidatePath(`/dashboard/products/${id}`);
-  return { success: true, product };
+  return { success: true, product: serializeProduct(product) };
 };
 
 export const deleteProducts = async (ids: string[]) => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { resolveBranchContext } from "@/lib/branch-context";
+import { serializeProduct } from "@/lib/product-serialization";
 
 export async function GET(
   _req: NextRequest,
@@ -29,7 +30,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(product);
+    return NextResponse.json(serializeProduct(product));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch product" },

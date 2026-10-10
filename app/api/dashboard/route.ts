@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
     const totalCostOfGoods = revenueOrders.reduce((sum, order) => {
       const orderCost = order.items.reduce((orderSum, item) => {
         // Use the product's costPrice, fallback to 0 if not available
-        const costPrice = item.product?.costPrice ?? 0;
+        const costPrice = item.product?.costPrice.toNumber() ?? 0;
         return orderSum + costPrice * item.quantity;
       }, 0);
       return sum + orderCost;
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
       const costOfGoods = dayOrders.reduce((sum, order) => {
         const orderCost =
           order.items?.reduce((orderSum, item) => {
-            const costPrice = item.product?.costPrice ?? 0;
+            const costPrice = item.product?.costPrice.toNumber() ?? 0;
             return orderSum + costPrice * item.quantity;
           }, 0) ?? 0;
         return sum + orderCost;

@@ -446,15 +446,15 @@ model Product {
   expiryDate       DateTime? // For Expiry tracking
   unit             String?   @default("pcs") // e.g., kg, box, pcs
   brand            String? // For Brand management
-  price            Float
-  lastPrice        Float     @default(0)
-  costPrice        Float     @default(0)
-  costPriceInclTax Float     @default(0) // ← new: cost price inclusive of tax
-  purchaseTaxRate  Float     @default(0) // tax rate % applied to purchase price
+  price            Decimal   @db.Decimal(14, 4)
+  lastPrice        Decimal   @default(0) @db.Decimal(14, 4)
+  costPrice        Decimal   @default(0) @db.Decimal(14, 4)
+  costPriceInclTax Decimal   @default(0) @db.Decimal(14, 4) // ← new: cost price inclusive of tax
+  purchaseTaxRate  Decimal   @default(0) @db.Decimal(5, 2) // tax rate % applied to purchase price
   imageUrl         String?
   isActive         Boolean   @default(true)
-  discountRate     Float     @default(0)
-  taxRate          Float     @default(0)
+  discountRate     Decimal   @default(0) @db.Decimal(5, 2)
+  taxRate          Decimal   @default(0) @db.Decimal(5, 2)
   branchId         String?
   categoryId       String?
   createdAt        DateTime  @default(now())
@@ -1025,12 +1025,12 @@ model PurchaseItem {
   sku             String
   orderedQty      Int // quantity ordered
   receivedQty     Int     @default(0) // quantity actually received
-  unitCostExcl    Float // unit cost excluding tax
-  unitCostIncl    Float // unit cost including tax
-  taxRate         Float   @default(0)
-  taxAmount       Float   @default(0)
-  subtotal        Float // orderedQty × unitCostExcl
-  total           Float // orderedQty × unitCostIncl
+  unitCostExcl    Decimal @db.Decimal(14, 4) // unit cost excluding tax
+  unitCostIncl    Decimal @db.Decimal(14, 4) // unit cost including tax
+  taxRate         Decimal @default(0) @db.Decimal(5, 2)
+  taxAmount       Decimal @default(0) @db.Decimal(14, 4)
+  subtotal        Decimal @db.Decimal(14, 4) // orderedQty × unitCostExcl
+  total           Decimal @db.Decimal(14, 4) // orderedQty × unitCostIncl
   // Update product cost price on receive?
   updateCostPrice Boolean @default(true)
 
@@ -1088,10 +1088,10 @@ model QuotationItem {
   productName String
   sku         String
   quantity    Int
-  unitPrice   Float
-  discount    Float   @default(0)
-  taxRate     Float   @default(0)
-  total       Float
+  unitPrice   Decimal @db.Decimal(5, 2)
+  discount    Decimal @default(0) @db.Decimal(5, 2)
+  taxRate     Decimal @default(0) @db.Decimal(5, 2)
+  total       Decimal @db.Decimal(10, 2)
 
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   product   Product?  @relation(fields: [productId], references: [id])
@@ -1139,10 +1139,10 @@ model SalesOrderItem {
   productName  String
   sku          String
   quantity     Int
-  unitPrice    Float
-  discount     Float   @default(0)
-  taxRate      Float   @default(0)
-  total        Float
+  unitPrice    Decimal @db.Decimal(5, 2)
+  discount     Decimal @default(0) @db.Decimal(5, 2)
+  taxRate      Decimal @default(0) @db.Decimal(5, 2)
+  total        Decimal @db.Decimal(10, 2)
   deliveredQty Int     @default(0) // Track partial deliveries
 
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
@@ -1228,10 +1228,10 @@ model InvoiceItem {
   productName String
   sku         String
   quantity    Int
-  unitPrice   Float
-  discount    Float   @default(0)
-  taxRate     Float   @default(0)
-  total       Float
+  unitPrice   Decimal @db.Decimal(5, 2)
+  discount    Decimal @default(0) @db.Decimal(5, 2)
+  taxRate     Decimal @default(0) @db.Decimal(5, 2)
+  total       Decimal @db.Decimal(10, 2)
 
   invoice Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   product Product? @relation(fields: [productId], references: [id])

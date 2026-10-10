@@ -189,21 +189,20 @@ export const createOrder = async (input: CreateOrderInput) => {
 
           if (!product) continue;
 
-          const minPrice = product.lastPrice > 0 ? product.lastPrice : 0;
-          const maxPrice = product.price;
+          const hasMinPrice = product.lastPrice.gt(0);
 
           // Price must be between lastPrice (or 0) and the standard price
-          if (item.unitPrice > maxPrice) {
+          if (product.price.lt(item.unitPrice)) {
             throw new Error(
               `Price for "${item.productName}" (KES ${item.unitPrice.toLocaleString()}) ` +
-                `exceeds the standard price of KES ${maxPrice.toLocaleString()}.`,
+                `exceeds the standard price of KES ${product.price.toNumber().toLocaleString()}.`,
             );
           }
 
-          if (minPrice > 0 && item.unitPrice < minPrice) {
+          if (hasMinPrice && product.lastPrice.gt(item.unitPrice)) {
             throw new Error(
               `Price for "${item.productName}" (KES ${item.unitPrice.toLocaleString()}) ` +
-                `is below the minimum allowed price of KES ${minPrice.toLocaleString()}.`,
+                `is below the minimum allowed price of KES ${product.lastPrice.toNumber().toLocaleString()}.`,
             );
           }
 

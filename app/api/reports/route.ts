@@ -158,7 +158,7 @@ export const GET = async (req: NextRequest) => {
           // Calculate COGS for this order
           const orderCost =
             o.items?.reduce((sum, item) => {
-              const costPrice = item.product?.costPrice ?? 0;
+              const costPrice = item.product?.costPrice.toNumber() ?? 0;
               return sum + costPrice * item.quantity;
             }, 0) ?? 0;
 
@@ -213,7 +213,7 @@ export const GET = async (req: NextRequest) => {
     const totalCostOfGoods = completedOrders.reduce((sum, order) => {
       const orderCost =
         order.items?.reduce((orderSum, item) => {
-          const costPrice = item.product?.costPrice ?? 0;
+          const costPrice = item.product?.costPrice.toNumber() ?? 0;
           return orderSum + costPrice * item.quantity;
         }, 0) ?? 0;
       return sum + orderCost;
@@ -239,7 +239,7 @@ export const GET = async (req: NextRequest) => {
     > = {};
     orderItems.forEach((item) => {
       const id = item.productId;
-      const costPrice = item.product?.costPrice ?? 0;
+      const costPrice = item.product?.costPrice.toNumber() ?? 0;
       const itemCost = costPrice * item.quantity;
       const itemProfit = item.total - itemCost;
 
@@ -310,7 +310,7 @@ export const GET = async (req: NextRequest) => {
     ).length;
     const totalStock = inventoryItems.reduce((s, i) => s + i.quantity, 0);
     const stockValue = inventoryItems.reduce(
-      (s, i) => s + i.quantity * (i.product.price ?? 0),
+      (s, i) => s + i.quantity * i.product.price.toNumber(),
       0,
     );
 
@@ -330,7 +330,7 @@ export const GET = async (req: NextRequest) => {
     const orderCostMap: Record<string, number> = {};
     orderItems.forEach((item) => {
       const orderId = item.orderId;
-      const costPrice = item.product?.costPrice ?? 0;
+      const costPrice = item.product?.costPrice.toNumber() ?? 0;
       orderCostMap[orderId] =
         (orderCostMap[orderId] || 0) + costPrice * item.quantity;
     });

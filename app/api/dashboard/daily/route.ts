@@ -117,7 +117,7 @@ export const GET = async () => {
     // Calculate total cost of products sold today
     const totalCostOfGoods = todayOrderItems.reduce((sum, item) => {
       // Use the product's costPrice, fallback to 0 if not available
-      const costPrice = item.product?.costPrice ?? 0;
+      const costPrice = item.product?.costPrice.toNumber() ?? 0;
       return sum + costPrice * item.quantity;
     }, 0);
 
