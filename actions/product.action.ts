@@ -57,8 +57,8 @@ export const createProduct = async (values: ProductFormValues) => {
   const { stock, ...productData } = parsed.data;
 
   // SKU unique per branch
-  const existing = await prisma.product.findUnique({
-    where: { sku_branchId: { sku: productData.sku, branchId: ctx.branchId } },
+  const existing = await prisma.product.findFirst({
+    where: { sku: productData.sku, branchId: ctx.branchId },
   });
   if (existing) {
     return {

@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { requireBranchContext } from "@/lib/branch-context";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
+import { nextDocumentNumber } from "@/lib/doc-number";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -21,21 +22,26 @@ const generatePurchaseNumber = async (branchId: string): Promise<string> => {
 
 // ── Item schema ───────────────────────────────────────────────────────────────
 
-const purchaseItemSchema = z.object({
-  productId: z.string().optional(),
-  productName: z.string().optional(),
-  sku: z.string().optional(),
-  orderedQty: z.number().int().min(1),
-  unitCostExcl: z.number().min(0), // cost excluding tax
-  taxRate: z.number().min(0).max(100),
-  updateCostPrice: z.boolean(),
-}).refine((data) => {
-  // Either productId should be set, or both productName and sku should be set
-  if (data.productId) return true;
-  return !!(data.productName && data.sku);
-}, {
-  message: "Either select a product or provide product name and SKU",
-});
+const purchaseItemSchema = z
+  .object({
+    productId: z.string().optional(),
+    productName: z.string().optional(),
+    sku: z.string().optional(),
+    orderedQty: z.number().int().min(1),
+    unitCostExcl: z.number().min(0), // cost excluding tax
+    taxRate: z.number().min(0).max(100),
+    updateCostPrice: z.boolean(),
+  })
+  .refine(
+    (data) => {
+      // Either productId should be set, or both productName and sku should be set
+      if (data.productId) return true;
+      return !!(data.productName && data.sku);
+    },
+    {
+      message: "Either select a product or provide product name and SKU",
+    },
+  );
 
 // ── Purchase schema ───────────────────────────────────────────────────────────
 
@@ -76,124 +82,148 @@ export const createPurchase = async (input: PurchaseInput) => {
 
   const { items, discountAmount, shippingCost, ...orderData } = parsed.data;
 
-  // Auto-create products that don't exist
-  const itemsWithProducts = await Promise.all(
-    items.map(async (item) => {
-      if (item.productId) {
-        // Product already selected, use it
-        return { ...item, productId: item.productId };
-      }
-
-      // No productId provided, need to find or create product
-      if (!item.productName || !item.sku) {
-        // Skip items without product info
-        return item;
-      }
-
-      // Check if product with this SKU already exists
-      const existingProduct = await prisma.product.findUnique({
-        where: { 
-          sku_branchId: { 
-            sku: item.sku!, 
-            branchId: ctx.branchId 
-          } 
-        },
-      });
-
-      if (existingProduct) {
-        // Use existing product
-        return { ...item, productId: existingProduct.id };
-      }
-
-      // Create new product
-      const newProduct = await prisma.product.create({
-        data: {
-          name: item.productName!,
-          sku: item.sku!,
-          price: item.unitCostExcl * 1.5, // Default selling price (markup)
-          costPrice: item.unitCostExcl,
-          costPriceInclTax: item.unitCostExcl * (1 + item.taxRate / 100),
-          purchaseTaxRate: item.taxRate,
-          branchId: ctx.branchId,
-          stock: {
-            create: {
-              quantity: 0,
-              lowStockAt: 10,
-              branchId: ctx.branchId,
-            },
-          },
-        },
-      });
-
-      await logActivity({
-        action: ActivityAction.PRODUCT_CREATED,
-        entity: "Product",
-        entityId: newProduct.id,
-        entityLabel: newProduct.name,
-        userId: ctx.userId,
-        branchId: ctx.branchId,
-        meta: { sku: newProduct.sku, autoCreated: true },
-      });
-
-      return { ...item, productId: newProduct.id };
-    })
-  );
-
-  // Compute totals
-  const computedItems = itemsWithProducts.map((item) => ({
-    ...item,
-    ...computeItem(item),
-  }));
-
-  const subtotal = computedItems.reduce((s, i) => s + i.subtotal, 0);
-  const taxAmount = computedItems.reduce((s, i) => s + i.taxAmount, 0);
-  const total =
-    subtotal + taxAmount + (shippingCost ?? 0) - (discountAmount ?? 0);
-
   const purchaseNumber = await generatePurchaseNumber(ctx.branchId);
 
-  const purchase = await prisma.purchase.create({
-    data: {
-      purchaseNumber,
-      branchId: ctx.branchId,
+  const { purchase, createdProducts, itemCount, total } =
+    await prisma.$transaction(async (tx) => {
+      const createdProducts: {
+        id: string;
+        name: string;
+        sku: string;
+      }[] = [];
+      const itemsWithProducts = [];
+
+      // Resolve existing products or create them within the purchase transaction.
+      for (const item of items) {
+        if (item.productId) {
+          itemsWithProducts.push({ ...item, productId: item.productId });
+          continue;
+        }
+
+        if (!item.productName || !item.sku) {
+          itemsWithProducts.push(item);
+          continue;
+        }
+
+        const existingProduct = await tx.product.findFirst({
+          where: {
+            sku: item.sku,
+            branchId: ctx.branchId,
+          },
+        });
+
+        if (existingProduct) {
+          itemsWithProducts.push({ ...item, productId: existingProduct.id });
+          continue;
+        }
+
+        const newProduct = await tx.product.create({
+          data: {
+            name: item.productName,
+            sku: item.sku,
+            price: item.unitCostExcl * 1.5, // Default selling price (markup)
+            costPrice: item.unitCostExcl,
+            costPriceInclTax: item.unitCostExcl * (1 + item.taxRate / 100),
+            purchaseTaxRate: item.taxRate,
+            branchId: ctx.branchId,
+            stock: {
+              create: {
+                quantity: 0,
+                lowStockAt: 10,
+                branchId: ctx.branchId,
+              },
+            },
+          },
+        });
+
+        createdProducts.push({
+          id: newProduct.id,
+          name: newProduct.name,
+          sku: newProduct.sku,
+        });
+        itemsWithProducts.push({ ...item, productId: newProduct.id });
+      }
+
+      const computedItems = itemsWithProducts.map((item) => ({
+        ...item,
+        ...computeItem(item),
+      }));
+
+      const subtotal = computedItems.reduce(
+        (sum, item) => sum + item.subtotal,
+        0,
+      );
+      const taxAmount = computedItems.reduce(
+        (sum, item) => sum + item.taxAmount,
+        0,
+      );
+      const total =
+        subtotal + taxAmount + (shippingCost ?? 0) - (discountAmount ?? 0);
+
+      const purchase = await tx.purchase.create({
+        data: {
+          purchaseNumber,
+          branchId: ctx.branchId,
+          userId: ctx.userId,
+          status: "DRAFT",
+          paymentStatus: "UNPAID",
+          supplierId: orderData.supplierId || null,
+          invoiceNumber: orderData.invoiceNumber || null,
+          invoiceDate: orderData.invoiceDate
+            ? new Date(orderData.invoiceDate)
+            : null,
+          expectedDate: orderData.expectedDate
+            ? new Date(orderData.expectedDate)
+            : null,
+          paymentMethod: orderData.paymentMethod || null,
+          notes: orderData.notes || null,
+          discountAmount: discountAmount ?? 0,
+          shippingCost: shippingCost ?? 0,
+          subtotal,
+          taxAmount,
+          total,
+          balanceDue: total,
+          items: {
+            create: computedItems.map((item) => ({
+              productId: item.productId!,
+              productName: item.productName || "",
+              sku: item.sku || "",
+              orderedQty: item.orderedQty,
+              receivedQty: 0,
+              unitCostExcl: item.unitCostExcl,
+              unitCostIncl: item.unitCostIncl,
+              taxRate: item.taxRate,
+              taxAmount: item.taxAmount,
+              subtotal: item.subtotal,
+              total: item.total,
+              updateCostPrice: item.updateCostPrice,
+            })),
+          },
+        },
+        include: { items: true, supplier: true },
+      });
+
+      await nextDocumentNumber(tx, "PURCHASE", ctx.branchId);
+
+      return {
+        purchase,
+        createdProducts,
+        itemCount: computedItems.length,
+        total,
+      };
+    });
+
+  for (const product of createdProducts) {
+    await logActivity({
+      action: ActivityAction.PRODUCT_CREATED,
+      entity: "Product",
+      entityId: product.id,
+      entityLabel: product.name,
       userId: ctx.userId,
-      status: "DRAFT",
-      paymentStatus: "UNPAID",
-      supplierId: orderData.supplierId || null,
-      invoiceNumber: orderData.invoiceNumber || null,
-      invoiceDate: orderData.invoiceDate
-        ? new Date(orderData.invoiceDate)
-        : null,
-      expectedDate: orderData.expectedDate
-        ? new Date(orderData.expectedDate)
-        : null,
-      paymentMethod: orderData.paymentMethod || null,
-      notes: orderData.notes || null,
-      discountAmount: discountAmount ?? 0,
-      shippingCost: shippingCost ?? 0,
-      subtotal,
-      taxAmount,
-      total,
-      balanceDue: total,
-      items: {
-        create: computedItems.map((item) => ({
-          productId: item.productId!,
-          productName: item.productName || "",
-          sku: item.sku || "",
-          orderedQty: item.orderedQty,
-          receivedQty: 0,
-          unitCostExcl: item.unitCostExcl,
-          unitCostIncl: item.unitCostIncl,
-          taxRate: item.taxRate,
-          taxAmount: item.taxAmount,
-          subtotal: item.subtotal,
-          total: item.total,
-          updateCostPrice: item.updateCostPrice,
-        })),
-      },
-    },
-    include: { items: true, supplier: true },
-  });
+      branchId: ctx.branchId,
+      meta: { sku: product.sku, autoCreated: true },
+    });
+  }
 
   await logActivity({
     action: ActivityAction.PURCHASE_CREATED,
@@ -202,7 +232,7 @@ export const createPurchase = async (input: PurchaseInput) => {
     entityLabel: purchase.purchaseNumber,
     userId: ctx.userId,
     branchId: ctx.branchId,
-    meta: { total, items: computedItems.length },
+    meta: { total, items: itemCount },
   });
 
   revalidatePath("/dashboard/purchases");

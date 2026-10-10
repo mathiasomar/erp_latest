@@ -9,6 +9,7 @@ import { notify } from "@/lib/notify";
 import { awardOrderPoints } from "@/actions/customer.action";
 import { requireBranchContext } from "@/lib/branch-context";
 import { createReceiptFromOrder } from "./receipt.action";
+import { nextDocumentNumber } from "@/lib/doc-number";
 
 // ── Single payment line schema ────────────────────────────────────────────────
 
@@ -271,6 +272,8 @@ export const createOrder = async (input: CreateOrderInput) => {
             },
           },
         });
+
+        await nextDocumentNumber(tx, "ORDER", ctx.branchId);
 
         // ── Decrement stock ────────────────────────────────────────────────────
         for (const item of items) {
