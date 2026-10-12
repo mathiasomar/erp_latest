@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { resolveBranchContext } from "@/lib/branch-context";
 
 export const dynamic = "force-dynamic";
@@ -245,7 +246,7 @@ export const GET = async (req: NextRequest) => {
     // Response
     // ────────────────────────────────────────────────────────────────────────
 
-    return NextResponse.json(receipts);
+    return NextResponse.json(serialize(receipts));
   } catch (error) {
     console.error("GET /api/receipts error:", error);
 

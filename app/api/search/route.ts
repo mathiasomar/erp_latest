@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +69,7 @@ export const GET = async (req: NextRequest) => {
       }),
     ]);
 
-    return NextResponse.json({ products, orders, users });
+    return NextResponse.json(serialize({ products, orders, users }));
   } catch {
     return NextResponse.json({ message: "Search failed" }, { status: 500 });
   }

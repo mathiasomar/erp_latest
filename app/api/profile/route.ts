@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/actions/profile.action";
+import { serialize } from "@/lib/money";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export const GET = async () => {
         { status: 401 },
       );
     }
-    return NextResponse.json(user);
+    return NextResponse.json(serialize(user));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch profile" },

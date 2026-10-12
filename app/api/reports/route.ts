@@ -9,6 +9,7 @@ import {
   eachMonthOfInterval,
 } from "date-fns";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { resolveBranchContext } from "@/lib/branch-context";
 
 export const dynamic = "force-dynamic";
@@ -380,7 +381,7 @@ export const GET = async (req: NextRequest) => {
       (a, b) => b.revenue - a.revenue,
     );
 
-    return NextResponse.json({
+    return NextResponse.json(serialize({
       summary: {
         totalRevenue,
         totalExpenses,
@@ -409,7 +410,7 @@ export const GET = async (req: NextRequest) => {
       expenseByCategory,
       stockMovement,
       cashierPerformance,
-    });
+    }));
   } catch (e) {
     console.error(e);
     return NextResponse.json(

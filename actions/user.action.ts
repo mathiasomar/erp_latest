@@ -5,6 +5,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
 import { sendEmail } from "@/lib/mail/send-email";
@@ -339,7 +340,7 @@ export const getUsers = async (branchId?: string) => {
               undefined,
           };
 
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     where,
     select: {
       id: true,
@@ -356,4 +357,5 @@ export const getUsers = async (branchId?: string) => {
     },
     orderBy: { createdAt: "desc" },
   });
+  return serialize(users);
 };

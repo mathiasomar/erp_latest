@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 
 export const GET = async (
   _req: NextRequest,
@@ -44,7 +45,7 @@ export const GET = async (
 
     if (!receipt)
       return NextResponse.json({ message: "Not found" }, { status: 404 });
-    return NextResponse.json(receipt);
+    return NextResponse.json(serialize(receipt));
   } catch {
     return NextResponse.json({ message: "Failed" }, { status: 500 });
   }

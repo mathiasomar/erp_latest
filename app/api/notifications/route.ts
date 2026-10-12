@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export const GET = async (req: NextRequest) => {
       }),
     ]);
 
-    return NextResponse.json({ notifications, unreadCount });
+    return NextResponse.json(serialize({ notifications, unreadCount }));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch notifications" },

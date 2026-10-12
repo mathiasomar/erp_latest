@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { requireBranchContext } from "@/lib/branch-context";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
+import { D, money, serialize } from "@/lib/money";
 import { nextDocumentNumber } from "@/lib/doc-number";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -63,11 +64,14 @@ export type PurchaseInput = z.infer<typeof purchaseSchema>;
 // ── Compute item financials ───────────────────────────────────────────────────
 
 const computeItem = (item: PurchaseItemInput) => {
-  const taxRate = item.taxRate / 100;
-  const unitCostIncl = item.unitCostExcl * (1 + taxRate);
-  const taxAmount = item.unitCostExcl * taxRate * item.orderedQty;
-  const subtotal = item.unitCostExcl * item.orderedQty;
-  const total = unitCostIncl * item.orderedQty;
+  const taxRate = D(item.taxRate).div(100);
+  const unitCostExcl = D(item.unitCostExcl);
+  const unitCostIncl = money(unitCostExcl.times(D(1).plus(taxRate))).toNumber();
+  const taxAmount = money(
+    unitCostExcl.times(taxRate).times(item.orderedQty),
+  ).toNumber();
+  const subtotal = money(unitCostExcl.times(item.orderedQty)).toNumber();
+  const total = money(D(unitCostIncl).times(item.orderedQty)).toNumber();
   return { unitCostIncl, taxAmount, subtotal, total };
 };
 
@@ -121,9 +125,11 @@ export const createPurchase = async (input: PurchaseInput) => {
           data: {
             name: item.productName,
             sku: item.sku,
-            price: item.unitCostExcl * 1.5, // Default selling price (markup)
+            price: money(D(item.unitCostExcl).times(1.5)).toNumber(),
             costPrice: item.unitCostExcl,
-            costPriceInclTax: item.unitCostExcl * (1 + item.taxRate / 100),
+            costPriceInclTax: money(
+              D(item.unitCostExcl).times(D(1).plus(D(item.taxRate).div(100))),
+            ).toNumber(),
             purchaseTaxRate: item.taxRate,
             branchId: ctx.branchId,
             stock: {
@@ -149,16 +155,24 @@ export const createPurchase = async (input: PurchaseInput) => {
         ...computeItem(item),
       }));
 
-      const subtotal = computedItems.reduce(
-        (sum, item) => sum + item.subtotal,
-        0,
-      );
-      const taxAmount = computedItems.reduce(
-        (sum, item) => sum + item.taxAmount,
-        0,
-      );
-      const total =
-        subtotal + taxAmount + (shippingCost ?? 0) - (discountAmount ?? 0);
+      const subtotal = money(
+        computedItems.reduce(
+          (sum, item) => sum.plus(D(item.subtotal)),
+          D(0),
+        ),
+      ).toNumber();
+      const taxAmount = money(
+        computedItems.reduce(
+          (sum, item) => sum.plus(D(item.taxAmount)),
+          D(0),
+        ),
+      ).toNumber();
+      const total = money(
+        D(subtotal)
+          .plus(taxAmount)
+          .plus(shippingCost ?? 0)
+          .minus(discountAmount ?? 0),
+      ).toNumber();
 
       const purchase = await tx.purchase.create({
         data: {
@@ -177,7 +191,7 @@ export const createPurchase = async (input: PurchaseInput) => {
             : null,
           paymentMethod: orderData.paymentMethod || null,
           notes: orderData.notes || null,
-          discountAmount: discountAmount ?? 0,
+          discountAmount: money(discountAmount ?? 0).toNumber(),
           shippingCost: shippingCost ?? 0,
           subtotal,
           taxAmount,
@@ -237,7 +251,7 @@ export const createPurchase = async (input: PurchaseInput) => {
 
   revalidatePath("/dashboard/purchases");
   revalidatePath("/dashboard/products");
-  return { success: true, purchase };
+  return serialize({ success: true, purchase });
 };
 
 // ── Receive inventory (by invoice) ───────────────────────────────────────────
@@ -404,8 +418,8 @@ export const addPurchasePayment = async (
   });
   if (!purchase) return { success: false, error: "Purchase not found" };
 
-  const newAmountPaid = purchase.amountPaid + amount;
-  const newBalance = purchase.total - newAmountPaid;
+  const newAmountPaid = money(D(purchase.amountPaid).plus(amount)).toNumber();
+  const newBalance = money(D(purchase.total).minus(newAmountPaid)).toNumber();
   const paymentStatus =
     newBalance <= 0 ? "PAID" : newAmountPaid > 0 ? "PARTIAL" : "UNPAID";
 

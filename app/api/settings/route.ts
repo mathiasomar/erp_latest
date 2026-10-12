@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { z } from "zod";
+import { serialize } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export const GET = async () => {
     const settings = await prisma.systemSetting.findMany({
       orderBy: [{ group: "asc" }, { label: "asc" }],
     });
-    return NextResponse.json(settings);
+    return NextResponse.json(serialize(settings));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch settings" },

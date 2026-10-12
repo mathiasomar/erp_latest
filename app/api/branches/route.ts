@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { serialize } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export const GET = async () => {
       },
     });
 
-    return NextResponse.json(branches);
+    return NextResponse.json(serialize(branches));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch branches" },

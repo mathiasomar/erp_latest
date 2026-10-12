@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 import { resolveBranchContext } from "@/lib/branch-context";
 
@@ -59,7 +60,7 @@ export const GET = async (req: NextRequest) => {
       prisma.activityLog.count({ where }),
     ]);
 
-    return NextResponse.json({ logs, total, page, limit });
+    return NextResponse.json(serialize({ logs, total, page, limit }));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch activity" },

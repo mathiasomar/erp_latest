@@ -1,5 +1,6 @@
 import { resolveBranchContext } from "@/lib/branch-context";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
       (t) => t.status === "FAILED",
     ).length;
 
-    return NextResponse.json({
+    return NextResponse.json(serialize({
       transactions,
       summary: {
         totalSuccess,
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
         totalFailed,
         totalCount: transactions.length,
       },
-    });
+    }));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch M-Pesa transactions" },

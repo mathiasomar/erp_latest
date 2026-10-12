@@ -17,6 +17,7 @@ import {
 import { notify } from "@/lib/notify";
 import { logActivity } from "@/lib/activity-logger";
 import { requireBranchContext } from "@/lib/branch-context";
+import { serialize } from "@/lib/money";
 
 // ── Expense categories — global, not per branch ───────────────────────────────
 
@@ -38,7 +39,7 @@ export const createExpenseCategory = async (
     data: { ...parsed.data, branchId: ctx.branchId },
   });
   revalidatePath("/dashboard/expenses");
-  return { success: true, category };
+  return serialize({ success: true, category });
 };
 
 export const updateExpenseCategory = async (
@@ -61,7 +62,7 @@ export const updateExpenseCategory = async (
     data: parsed.data,
   });
   revalidatePath("/dashboard/expenses");
-  return { success: true, category };
+  return serialize({ success: true, category });
 };
 
 export const deleteExpenseCategory = async (id: string) => {
@@ -119,7 +120,7 @@ export const createExpense = async (values: ExpenseFormValues) => {
   });
 
   revalidatePath("/dashboard/expenses");
-  return { success: true, expense };
+  return serialize({ success: true, expense });
 };
 
 export const updateExpense = async (id: string, values: ExpenseFormValues) => {
@@ -153,7 +154,7 @@ export const updateExpense = async (id: string, values: ExpenseFormValues) => {
   });
 
   revalidatePath("/dashboard/expenses");
-  return { success: true, expense };
+  return serialize({ success: true, expense });
 };
 
 export const deleteExpenses = async (ids: string[]) => {

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 import { resolveBranchContext } from "@/lib/branch-context";
 
@@ -108,7 +109,7 @@ export async function GET(req: NextRequest) {
       });
     });
 
-    return NextResponse.json({ payments, totalRevenue, byMethod });
+    return NextResponse.json(serialize({ payments, totalRevenue, byMethod }));
   } catch (e) {
     console.error("[payments route]", e);
     return NextResponse.json(

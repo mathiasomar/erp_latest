@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = async (
@@ -31,7 +32,7 @@ export const GET = async (
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
-    return NextResponse.json(user);
+    return NextResponse.json(serialize(user));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch user" },

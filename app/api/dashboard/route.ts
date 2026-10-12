@@ -7,6 +7,7 @@ import {
   format,
 } from "date-fns";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { resolveBranchContext } from "@/lib/branch-context";
 
 export async function GET(req: NextRequest) {
@@ -228,7 +229,7 @@ export async function GET(req: NextRequest) {
       _sum: { amount: true },
     });
 
-    return NextResponse.json({
+    return NextResponse.json(serialize({
       kpis: {
         totalRevenue,
         totalExpensesInRange,
@@ -255,7 +256,7 @@ export async function GET(req: NextRequest) {
       topProducts,
       paymentBreakdown,
       mpesaStats,
-    });
+    }));
   } catch (e) {
     console.error(e);
     return NextResponse.json(

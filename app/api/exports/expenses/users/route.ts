@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export const GET = async () => {
       orderBy: { createdAt: "asc" },
     });
 
-    return NextResponse.json(users);
+    return NextResponse.json(serialize(users));
   } catch {
     return NextResponse.json(
       { message: "Failed to export users" },

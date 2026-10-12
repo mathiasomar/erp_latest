@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { startOfDay, endOfDay } from "date-fns";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export const GET = async (req: NextRequest) => {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(logs);
+    return NextResponse.json(serialize(logs));
   } catch {
     return NextResponse.json(
       { message: "Failed to export stock logs" },

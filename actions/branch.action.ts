@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
+import { serialize } from "@/lib/money";
 import { BRANCH_COOKIE } from "@/lib/branch-context";
 
 // ── Assert caller is admin ────────────────────────────────────────────────────
@@ -27,7 +28,7 @@ export const switchBranch = async (branchId: string) => {
     where: { id: branchId },
   });
   if (!branch || !branch.isActive) {
-    return { success: false, error: "Branch not found or inactive" };
+    return { success: false as const, error: "Branch not found or inactive" };
   }
 
   const cookieStore = await cookies();
@@ -40,7 +41,7 @@ export const switchBranch = async (branchId: string) => {
   });
 
   revalidatePath("/dashboard", "layout");
-  return { success: true, branch };
+  return serialize({ success: true, branch });
 };
 
 // ── Create branch ─────────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ export const createBranch = async (values: BranchFormValues) => {
   });
 
   revalidatePath("/dashboard/branches");
-  return { success: true, branch };
+  return serialize({ success: true, branch });
 };
 
 // ── Update branch ─────────────────────────────────────────────────────────────
@@ -125,7 +126,7 @@ export const updateBranch = async (
 
   revalidatePath("/dashboard/branches");
   revalidatePath(`/dashboard/branches/${id}`);
-  return { success: true, branch };
+  return serialize({ success: true, branch });
 };
 
 // ── Set default branch ────────────────────────────────────────────────────────

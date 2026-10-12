@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveBranchContext } from "@/lib/branch-context";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { subDays, startOfDay } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -72,7 +73,7 @@ export const GET = async (
       }),
     ]);
 
-    return NextResponse.json({
+    return NextResponse.json(serialize({
       totalOrders,
       totalRevenue: revenueAll._sum.total ?? 0,
       last30Orders,
@@ -87,7 +88,7 @@ export const GET = async (
         units: p._sum.quantity ?? 0,
         revenue: p._sum.total ?? 0,
       })),
-    });
+    }));
   } catch {
     return NextResponse.json({ message: "Failed" }, { status: 500 });
   }

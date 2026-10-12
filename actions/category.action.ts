@@ -6,14 +6,16 @@ import prisma from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
 import { requireBranchContext } from "@/lib/branch-context";
+import { serialize } from "@/lib/money";
 
 export const getCategories = async () => {
   const ctx = await requireBranchContext();
-  return prisma.category.findMany({
+  const categories = await prisma.category.findMany({
     where: { branchId: ctx.branchId },
     orderBy: { name: "asc" },
     include: { _count: { select: { products: true } } },
   });
+  return serialize(categories);
 };
 
 export const createCategory = async (values: CategoryFormValues) => {
@@ -50,7 +52,7 @@ export const createCategory = async (values: CategoryFormValues) => {
 
   revalidatePath("/dashboard/categories");
   revalidatePath("/dashboard/products");
-  return { success: true, category };
+  return serialize({ success: true, category });
 };
 
 export const updateCategory = async (
@@ -93,7 +95,7 @@ export const updateCategory = async (
 
   revalidatePath("/dashboard/categories");
   revalidatePath("/dashboard/products");
-  return { success: true, category };
+  return serialize({ success: true, category });
 };
 
 export const deleteCategories = async (ids: string[]) => {

@@ -1,5 +1,6 @@
 import { resolveBranchContext } from "@/lib/branch-context";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -25,7 +26,7 @@ export async function GET() {
       orderBy: { quantity: "asc" },
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(serialize(result));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch low stock" },

@@ -8,6 +8,7 @@ import { ActivityAction, NotificationType } from "@/generated/prisma/enums";
 import { notify } from "@/lib/notify";
 import { awardOrderPoints } from "@/actions/customer.action";
 import { requireBranchContext } from "@/lib/branch-context";
+import { D, money, serialize } from "@/lib/money";
 import { createReceiptFromOrder } from "./receipt.action";
 import { nextDocumentNumber } from "@/lib/doc-number";
 
@@ -119,21 +120,26 @@ export const createOrder = async (input: CreateOrderInput) => {
 
   if (!parsed.success) {
     console.error("Validation error:", parsed.error.flatten().fieldErrors);
-    return { success: false, error: parsed.error.flatten().fieldErrors };
+    return {
+      success: false as const,
+      error: parsed.error.flatten().fieldErrors,
+    };
   }
 
   const { items, payments, ...orderData } = parsed.data;
 
   // Calculate totals
-  const paymentsTotal = payments.reduce((s, p) => s + p.amount, 0);
-  const totalPaid = orderData.amountPaid ?? paymentsTotal;
-  const changeAmount = orderData.change ?? 0;
+  const paymentsTotal = money(
+    payments.reduce((sum, payment) => sum.plus(payment.amount), D(0)),
+  ).toNumber();
+  const totalPaid = money(orderData.amountPaid ?? paymentsTotal).toNumber();
+  const changeAmount = money(orderData.change ?? 0).toNumber();
   const orderTotal = parsed.data.total;
 
   // Validate that payments total is at least the order total
   if (paymentsTotal < orderTotal - 0.01) {
     return {
-      success: false,
+      success: false as const,
       error: {
         root: [
           `Payment total KES ${paymentsTotal.toLocaleString()} ` +
@@ -148,7 +154,7 @@ export const createOrder = async (input: CreateOrderInput) => {
     const calculatedChange = paymentsTotal - orderTotal;
     if (Math.abs(calculatedChange - changeAmount) > 0.01) {
       return {
-        success: false,
+        success: false as const,
         error: {
           root: [
             `Change amount KES ${changeAmount.toLocaleString()} ` +
@@ -247,7 +253,7 @@ export const createOrder = async (input: CreateOrderInput) => {
                 sku: item.sku,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                total: item.unitPrice * item.quantity,
+                total: money(D(item.unitPrice).times(item.quantity)).toNumber(),
               })),
             },
             payment: {
@@ -381,12 +387,12 @@ export const createOrder = async (input: CreateOrderInput) => {
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/orders");
     revalidatePath("/dashboard/products");
-    return { success: true, order };
+    return serialize({ success: true, order });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to create order";
     console.error("Order creation error:", error);
-    return { success: false, error: { root: [message] } };
+    return { success: false as const, error: { root: [message] } };
   }
 };
 

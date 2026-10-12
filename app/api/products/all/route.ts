@@ -1,7 +1,7 @@
 import { resolveBranchContext } from "@/lib/branch-context";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { serializeProduct } from "@/lib/product-serialization";
+import { serialize } from "@/lib/money";
 
 export async function GET() {
   const ctx = await resolveBranchContext();
@@ -15,7 +15,7 @@ export async function GET() {
       include: { category: true, stock: true },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(products.map(serializeProduct));
+    return NextResponse.json(serialize(products));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch products" },

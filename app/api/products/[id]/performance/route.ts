@@ -8,6 +8,7 @@ import {
   format,
 } from "date-fns";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 
 export const GET = async (
   req: NextRequest,
@@ -99,12 +100,12 @@ export const GET = async (
     const totalUnits = orderItems.reduce((s, i) => s + i.quantity, 0);
     const totalOrders = new Set(orderItems.map((i) => i.order.id)).size;
 
-    return NextResponse.json({
+    return NextResponse.json(serialize({
       chartData,
       totalRevenue,
       totalUnits,
       totalOrders,
-    });
+    }));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch performance" },

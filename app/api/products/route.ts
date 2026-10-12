@@ -1,7 +1,7 @@
 import { resolveBranchContext } from "@/lib/branch-context";
 import prisma from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { serializeProduct } from "@/lib/product-serialization";
+import { serialize } from "@/lib/money";
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
       orderBy: { name: "asc" },
     });
 
-    return NextResponse.json(products.map(serializeProduct));
+    return NextResponse.json(serialize(products));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch products" },

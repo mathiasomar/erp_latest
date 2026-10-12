@@ -8,6 +8,7 @@ import {
   startOfDay,
 } from "date-fns";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { resolveBranchContext } from "@/lib/branch-context";
 
 export async function GET(req: NextRequest) {
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
       amount: grouped[key],
     }));
 
-    return NextResponse.json({ chartData });
+    return NextResponse.json(serialize({ chartData }));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch chart data" },

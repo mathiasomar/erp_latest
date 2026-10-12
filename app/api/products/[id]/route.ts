@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { serializeProduct } from "@/lib/product-serialization";
+import { serialize } from "@/lib/money";
 
 export async function GET(
   _req: NextRequest,
@@ -18,7 +18,7 @@ export async function GET(
         { status: 404 },
       );
     }
-    return NextResponse.json(serializeProduct(product));
+    return NextResponse.json(serialize(product));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch product" },

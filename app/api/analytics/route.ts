@@ -8,6 +8,7 @@ import {
   getDay,
 } from "date-fns";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { resolveBranchContext } from "@/lib/branch-context";
 
 export const dynamic = "force-dynamic";
@@ -177,7 +178,7 @@ export const GET = async (req: NextRequest) => {
       count: orders.filter((o) => o.total >= b.min && o.total <= b.max).length,
     }));
 
-    return NextResponse.json({
+    return NextResponse.json(serialize({
       kpis: {
         totalRevenue,
         totalExpenses,
@@ -191,7 +192,7 @@ export const GET = async (req: NextRequest) => {
       cashierLeaderboard,
       methodTrend,
       orderDistribution,
-    });
+    }));
   } catch (e) {
     console.error(e);
     return NextResponse.json(

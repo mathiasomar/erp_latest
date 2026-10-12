@@ -6,7 +6,7 @@ import prisma from "@/lib/prisma";
 import { ProductFormValues, productSchema } from "@/lib/validations/product";
 import { revalidatePath } from "next/cache";
 import { requireBranchContext } from "@/lib/branch-context";
-import { serializeProduct } from "@/lib/product-serialization";
+import { serialize } from "@/lib/money";
 
 export const getAllProducts = async () => {
   const ctx = await requireBranchContext();
@@ -15,7 +15,7 @@ export const getAllProducts = async () => {
     include: { category: true, stock: true },
     orderBy: { createdAt: "desc" },
   });
-  return products.map(serializeProduct);
+  return serialize(products);
 };
 
 export const getProducts = async (search?: string, categoryId?: string) => {
@@ -39,15 +39,16 @@ export const getProducts = async (search?: string, categoryId?: string) => {
     include: { category: true, stock: true },
     orderBy: { name: "asc" },
   });
-  return products.map(serializeProduct);
+  return serialize(products);
 };
 
 export const getCategories = async () => {
   const ctx = await requireBranchContext();
-  return prisma.category.findMany({
+  const categories = await prisma.category.findMany({
     where: { branchId: ctx.branchId },
     orderBy: { name: "asc" },
   });
+  return serialize(categories);
 };
 
 export const createProduct = async (values: ProductFormValues) => {
@@ -104,7 +105,7 @@ export const createProduct = async (values: ProductFormValues) => {
   });
 
   revalidatePath("/dashboard/products");
-  return { success: true, product: serializeProduct(product) };
+  return serialize({ success: true, product });
 };
 
 export const updateProduct = async (id: string, values: ProductFormValues) => {
@@ -169,7 +170,7 @@ export const updateProduct = async (id: string, values: ProductFormValues) => {
 
   revalidatePath("/dashboard/products");
   revalidatePath(`/dashboard/products/${id}`);
-  return { success: true, product: serializeProduct(product) };
+  return serialize({ success: true, product });
 };
 
 export const deleteProducts = async (ids: string[]) => {

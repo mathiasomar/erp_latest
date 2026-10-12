@@ -7,6 +7,7 @@ import { ActivityAction } from "@/generated/prisma/enums";
 import { calculatePointsEarned } from "@/lib/loyalty";
 import prisma from "@/lib/prisma";
 import { requireBranchContext } from "@/lib/branch-context";
+import { serialize } from "@/lib/money";
 
 // ── schemas ───────────────────────────────────────────────────────────────────
 
@@ -75,7 +76,7 @@ export const createCustomer = async (values: CustomerValues) => {
   });
 
   revalidatePath("/dashboard/customers");
-  return { success: true, customer };
+  return serialize({ success: true, customer });
 };
 
 // ── update ────────────────────────────────────────────────────────────────────
@@ -133,7 +134,7 @@ export const updateCustomer = async (id: string, values: CustomerValues) => {
 
   revalidatePath("/dashboard/customers");
   revalidatePath(`/dashboard/customers/${id}`);
-  return { success: true, customer };
+  return serialize({ success: true, customer });
 };
 
 // ── toggle active ─────────────────────────────────────────────────────────────

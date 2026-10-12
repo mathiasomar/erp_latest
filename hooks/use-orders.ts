@@ -32,7 +32,7 @@ export const useCreateOrder = (onSuccess?: (order: Order) => void) => {
   return useMutation({
     mutationFn: (input: CreateOrderInput) => createOrder(input),
     onSuccess: (result) => {
-      if (result.success && result.order) {
+      if (result.success) {
         playSuccessSound(); // Play chime
         qc.invalidateQueries({ queryKey: ["orders"] });
         qc.invalidateQueries({ queryKey: ["products-all"] });

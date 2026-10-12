@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -12,7 +13,7 @@ export async function GET(
       orderBy: { createdAt: "desc" },
       take: 50,
     });
-    return NextResponse.json(logs);
+    return NextResponse.json(serialize(logs));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch logs" },

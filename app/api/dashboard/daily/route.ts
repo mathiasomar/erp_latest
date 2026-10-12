@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveBranchContext } from "@/lib/branch-context";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import {
   startOfDay,
   endOfDay,
@@ -220,7 +221,7 @@ export const GET = async () => {
       (a, b) => b.revenue - a.revenue,
     );
 
-    return NextResponse.json({
+    return NextResponse.json(serialize({
       date: format(new Date(), "EEEE, dd MMM yyyy"),
       summary: {
         todayRevenue,
@@ -257,7 +258,7 @@ export const GET = async () => {
           createdAt: o.createdAt,
           cashier: o.user?.name ?? "Unknown",
         })),
-    });
+    }));
   } catch (e) {
     console.error(e);
     return NextResponse.json({ message: "Failed" }, { status: 500 });

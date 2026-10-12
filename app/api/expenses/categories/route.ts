@@ -1,5 +1,6 @@
 import { resolveBranchContext } from "@/lib/branch-context";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -14,7 +15,7 @@ export async function GET() {
       orderBy: { name: "asc" },
       include: { _count: { select: { expenses: true } } },
     });
-    return NextResponse.json(categories);
+    return NextResponse.json(serialize(categories));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch categories" },

@@ -1,6 +1,7 @@
 // Lightweight search for POS customer picker
 
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export const GET = async (req: NextRequest) => {
       take: 6,
     });
 
-    return NextResponse.json(customers);
+    return NextResponse.json(serialize(customers));
   } catch {
     return NextResponse.json([], { status: 500 });
   }

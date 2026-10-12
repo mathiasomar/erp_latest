@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = async (
@@ -27,7 +28,7 @@ export const GET = async (
       );
     }
 
-    return NextResponse.json(supplier);
+    return NextResponse.json(serialize(supplier));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch supplier" },

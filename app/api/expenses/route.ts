@@ -1,5 +1,6 @@
 import { resolveBranchContext } from "@/lib/branch-context";
 import prisma from "@/lib/prisma";
+import { D, money, serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -53,28 +54,36 @@ export async function GET(req: NextRequest) {
       orderBy: { date: "desc" },
     });
 
-    const totalAmount = expenses.reduce((s, e) => s + e.amount, 0);
+    const totalAmount = money(
+      expenses.reduce((sum, expense) => sum.plus(expense.amount), D(0)),
+    ).toNumber();
     const byMethod = {
       CASH: expenses
         .filter((e) => e.paymentMethod === "CASH")
-        .reduce((s, e) => s + e.amount, 0),
+        .reduce((sum, expense) => sum.plus(expense.amount), D(0))
+        .toNumber(),
       MPESA: expenses
         .filter((e) => e.paymentMethod === "MPESA")
-        .reduce((s, e) => s + e.amount, 0),
+        .reduce((sum, expense) => sum.plus(expense.amount), D(0))
+        .toNumber(),
       CARD: expenses
         .filter((e) => e.paymentMethod === "CARD")
-        .reduce((s, e) => s + e.amount, 0),
+        .reduce((sum, expense) => sum.plus(expense.amount), D(0))
+        .toNumber(),
       BANK_TRANSFER: expenses
         .filter((e) => e.paymentMethod === "BANK_TRANSFER")
-        .reduce((s, e) => s + e.amount, 0),
+        .reduce((sum, expense) => sum.plus(expense.amount), D(0))
+        .toNumber(),
     };
     const byCategory = expenses.reduce<Record<string, number>>((acc, e) => {
       const key = e.category?.name ?? "Uncategorised";
-      acc[key] = (acc[key] ?? 0) + e.amount;
+      acc[key] = money(D(acc[key]).plus(e.amount)).toNumber();
       return acc;
     }, {});
 
-    return NextResponse.json({ expenses, totalAmount, byMethod, byCategory });
+    return NextResponse.json(
+      serialize({ expenses, totalAmount, byMethod, byCategory }),
+    );
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch expenses" },

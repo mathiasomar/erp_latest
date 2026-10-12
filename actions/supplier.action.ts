@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { requireBranchContext } from "@/lib/branch-context";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
+import { serialize } from "@/lib/money";
 
 const supplierSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -50,7 +51,7 @@ export const createSupplier = async (values: SupplierValues) => {
   });
 
   revalidatePath("/dashboard/purchases/suppliers");
-  return { success: true, supplier };
+  return serialize({ success: true, supplier });
 };
 
 export const updateSupplier = async (id: string, values: SupplierValues) => {
@@ -83,7 +84,7 @@ export const updateSupplier = async (id: string, values: SupplierValues) => {
   });
 
   revalidatePath("/dashboard/purchases/suppliers");
-  return { success: true, supplier };
+  return serialize({ success: true, supplier });
 };
 
 export const deleteSupplier = async (id: string) => {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { resolveBranchContext } from "@/lib/branch-context";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export const GET = async () => {
       orderBy: { name: "asc" },
     });
 
-    return NextResponse.json(suppliers);
+    return NextResponse.json(serialize(suppliers));
   } catch (e) {
     console.error(e);
     return NextResponse.json({ message: "Failed" }, { status: 500 });

@@ -1,5 +1,6 @@
 import { resolveBranchContext } from "@/lib/branch-context";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextResponse } from "next/server";
 
 export const GET = async () => {
@@ -29,7 +30,7 @@ export const GET = async () => {
         },
       },
     });
-    return NextResponse.json(users);
+    return NextResponse.json(serialize(users));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch users" },

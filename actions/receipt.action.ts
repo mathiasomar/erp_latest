@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
 import { requireBranchContext } from "@/lib/branch-context";
+import { D, money, serialize } from "@/lib/money";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ export const createReceiptFromOrder = async (orderId: string) => {
 
   // Don't create a receipt if one already exists for this order
   const existing = await prisma.receipt.findUnique({ where: { orderId } });
-  if (existing) return { success: true, receipt: existing };
+  if (existing) return serialize({ success: true, receipt: existing });
 
   const receiptNumber = await generateReceiptNumber(ctx.branchId);
 
@@ -77,7 +78,7 @@ export const createReceiptFromOrder = async (orderId: string) => {
     include: { items: true },
   });
 
-  return { success: true, receipt };
+  return serialize({ success: true, receipt });
 };
 
 // ── Void receipt ──────────────────────────────────────────────────────────────
@@ -180,7 +181,7 @@ const combineSchema = z.object({
 export const combineReceipts = async (receiptIds: string[], note?: string) => {
   const parsed = combineSchema.safeParse({ receiptIds, note });
   if (!parsed.success) {
-    return { success: false, error: parsed.error.issues[0].message };
+    return { success: false as const, error: parsed.error.issues[0].message };
   }
 
   const ctx = await requireBranchContext();
@@ -199,7 +200,7 @@ export const combineReceipts = async (receiptIds: string[], note?: string) => {
 
   if (sources.length !== receiptIds.length) {
     return {
-      success: false,
+      success: false as const,
       error:
         "Some receipts are not active or not found. Only active receipts can be combined.",
     };
@@ -209,15 +210,23 @@ export const combineReceipts = async (receiptIds: string[], note?: string) => {
   const customerIds = [...new Set(sources.map((r) => r.customerId))];
   if (customerIds.length > 1) {
     return {
-      success: false,
+      success: false as const,
       error: "All receipts must belong to the same customer to be combined.",
     };
   }
 
-  const combinedTotal = sources.reduce((s, r) => s + r.total, 0);
-  const combinedSubtotal = sources.reduce((s, r) => s + r.subtotal, 0);
-  const combinedDiscount = sources.reduce((s, r) => s + r.discount, 0);
-  const combinedTax = sources.reduce((s, r) => s + r.tax, 0);
+  const combinedTotal = money(
+    sources.reduce((sum, receipt) => sum.plus(receipt.total), D(0)),
+  ).toNumber();
+  const combinedSubtotal = money(
+    sources.reduce((sum, receipt) => sum.plus(receipt.subtotal), D(0)),
+  ).toNumber();
+  const combinedDiscount = money(
+    sources.reduce((sum, receipt) => sum.plus(receipt.discount), D(0)),
+  ).toNumber();
+  const combinedTax = money(
+    sources.reduce((sum, receipt) => sum.plus(receipt.tax), D(0)),
+  ).toNumber();
   const receiptNumber = await generateReceiptNumber(ctx.branchId);
   const now = new Date();
 
@@ -283,7 +292,7 @@ export const combineReceipts = async (receiptIds: string[], note?: string) => {
   });
 
   revalidatePath("/dashboard/receipts");
-  return { success: true, receipt: combined };
+  return serialize({ success: true, receipt: combined });
 };
 
 // ── Reprint / duplicate receipt ───────────────────────────────────────────────
@@ -299,9 +308,12 @@ export const reprintReceipt = async (id: string) => {
     include: { items: true },
   });
 
-  if (!original) return { success: false, error: "Receipt not found" };
+  if (!original) return { success: false as const, error: "Receipt not found" };
   if (original.status === "VOIDED") {
-    return { success: false, error: "Cannot reprint a voided receipt" };
+    return {
+      success: false as const,
+      error: "Cannot reprint a voided receipt",
+    };
   }
 
   const now = new Date();
@@ -360,7 +372,7 @@ export const reprintReceipt = async (id: string) => {
   });
 
   revalidatePath("/dashboard/receipts");
-  return { success: true, receipt: duplicate };
+  return serialize({ success: true, receipt: duplicate });
 };
 
 // ── Record print ──────────────────────────────────────────────────────────────

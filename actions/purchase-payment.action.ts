@@ -6,6 +6,7 @@ import prisma from "@/lib/prisma";
 import { requireBranchContext } from "@/lib/branch-context";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
+import { D, money, serialize } from "@/lib/money";
 
 const purchasePaymentSchema = z.object({
   purchaseId: z.string(),
@@ -45,8 +46,10 @@ export const createPurchasePayment = async (values: PurchasePaymentValues): Prom
   const existingPayments = await prisma.purchasePayment.findMany({
     where: { purchaseId: parsed.data.purchaseId },
   });
-  const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
-  const newTotalPaid = totalPaid + parsed.data.amount;
+  const totalPaid = money(
+    existingPayments.reduce((sum, payment) => sum.plus(payment.amount), D(0)),
+  ).toNumber();
+  const newTotalPaid = money(D(totalPaid).plus(parsed.data.amount)).toNumber();
 
   if (newTotalPaid > purchase.total) {
     return { 
@@ -82,7 +85,7 @@ export const createPurchasePayment = async (values: PurchasePaymentValues): Prom
     where: { id: parsed.data.purchaseId },
     data: {
       paymentStatus: newPaymentStatus,
-      balanceDue: purchase.total - newTotalPaid,
+      balanceDue: money(D(purchase.total).minus(newTotalPaid)).toNumber(),
     },
   });
 
@@ -97,7 +100,7 @@ export const createPurchasePayment = async (values: PurchasePaymentValues): Prom
   });
 
   revalidatePath("/dashboard/purchases");
-  return { success: true, payment };
+  return serialize({ success: true, payment });
 };
 
 export const deletePurchasePayment = async (id: string): Promise<PurchasePaymentResult> => {
@@ -134,7 +137,9 @@ export const deletePurchasePayment = async (id: string): Promise<PurchasePayment
   const remainingPayments = await prisma.purchasePayment.findMany({
     where: { purchaseId: payment.purchaseId },
   });
-  const totalPaid = remainingPayments.reduce((sum, p) => sum + p.amount, 0);
+  const totalPaid = money(
+    remainingPayments.reduce((sum, remainingPayment) => sum.plus(remainingPayment.amount), D(0)),
+  ).toNumber();
 
   let newPaymentStatus: "UNPAID" | "PARTIAL" | "PAID" = "UNPAID";
   if (totalPaid >= payment.purchase.total) {
@@ -147,10 +152,18 @@ export const deletePurchasePayment = async (id: string): Promise<PurchasePayment
     where: { id: payment.purchaseId },
     data: {
       paymentStatus: newPaymentStatus,
-      balanceDue: payment.purchase.total - totalPaid,
+      balanceDue: money(D(payment.purchase.total).minus(totalPaid)).toNumber(),
     },
   });
 
   revalidatePath("/dashboard/purchases");
-  return { success: true, payment: { id: payment.id, amount: payment.amount, method: payment.method, purchaseId: payment.purchaseId } };
+  return serialize({
+    success: true,
+    payment: {
+      id: payment.id,
+      amount: payment.amount,
+      method: payment.method,
+      purchaseId: payment.purchaseId,
+    },
+  });
 };

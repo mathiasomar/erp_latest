@@ -7,6 +7,7 @@ import { z } from "zod";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 
 // ── schemas ───────────────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ export const getCurrentUser = async () => {
     },
   });
 
-  return user;
+  return serialize(user);
 };
 
 // ── update profile ────────────────────────────────────────────────────────────
@@ -121,7 +122,7 @@ export const updateProfile = async (values: UpdateProfileValues) => {
   });
 
   revalidatePath("/dashboard/profile");
-  return { success: true, user: updated };
+  return serialize({ success: true, user: updated });
 };
 
 // ── change password ───────────────────────────────────────────────────────────

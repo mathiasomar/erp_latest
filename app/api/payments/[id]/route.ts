@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -22,7 +23,7 @@ export async function GET(
         { status: 404 },
       );
     }
-    return NextResponse.json(payment);
+    return NextResponse.json(serialize(payment));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch payment" },

@@ -8,6 +8,7 @@ import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-logger";
 import { ActivityAction } from "@/generated/prisma/enums";
+import { serialize } from "@/lib/money";
 
 // ── Get all settings ──────────────────────────────────────────────────────────
 
@@ -15,7 +16,7 @@ export const getAllSettings = async () => {
   const settings = await prisma.systemSetting.findMany({
     orderBy: [{ group: "asc" }, { label: "asc" }],
   });
-  return settings;
+  return serialize(settings);
 };
 
 // ── Get settings as a flat map ────────────────────────────────────────────────

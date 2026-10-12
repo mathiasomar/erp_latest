@@ -8,6 +8,7 @@ import {
   format,
 } from "date-fns";
 import prisma from "@/lib/prisma";
+import { serialize } from "@/lib/money";
 
 export const GET = async (
   req: NextRequest,
@@ -126,13 +127,13 @@ export const GET = async (
     const totalRevenue = orders.reduce((s, o) => s + o.total, 0);
     const totalActivities = logs.length;
 
-    return NextResponse.json({
+    return NextResponse.json(serialize({
       chartData,
       totalOrders,
       totalRevenue,
       totalActivities,
       recentActivity,
-    });
+    }));
   } catch {
     return NextResponse.json(
       { message: "Failed to fetch user activity" },
