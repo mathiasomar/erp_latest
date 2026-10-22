@@ -40,6 +40,9 @@ ADD COLUMN     "purchaseTaxRate" DOUBLE PRECISION NOT NULL DEFAULT 0;
 ALTER TABLE "StockLog" ADD COLUMN     "purchaseItemId" TEXT,
 ADD COLUMN     "userId" TEXT;
 
+-- AlterTable
+ALTER TABLE "user" ADD COLUMN     "twoFactorEnabled" BOOLEAN DEFAULT false;
+
 -- CreateTable
 CREATE TABLE "Supplier" (
     "id" TEXT NOT NULL,
@@ -119,6 +122,17 @@ CREATE TABLE "PurchasePayment" (
     CONSTRAINT "PurchasePayment_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "twoFactor" (
+    "id" TEXT NOT NULL,
+    "secret" TEXT NOT NULL,
+    "backupCodes" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "verified" BOOLEAN DEFAULT true,
+
+    CONSTRAINT "twoFactor_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "Supplier_branchId_idx" ON "Supplier"("branchId");
 
@@ -127,6 +141,12 @@ CREATE INDEX "Purchase_branchId_status_idx" ON "Purchase"("branchId", "status");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Purchase_purchaseNumber_branchId_key" ON "Purchase"("purchaseNumber", "branchId");
+
+-- CreateIndex
+CREATE INDEX "twoFactor_secret_idx" ON "twoFactor"("secret");
+
+-- CreateIndex
+CREATE INDEX "twoFactor_userId_idx" ON "twoFactor"("userId");
 
 -- AddForeignKey
 ALTER TABLE "StockLog" ADD CONSTRAINT "StockLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -151,3 +171,6 @@ ALTER TABLE "PurchaseItem" ADD CONSTRAINT "PurchaseItem_productId_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "PurchasePayment" ADD CONSTRAINT "PurchasePayment_purchaseId_fkey" FOREIGN KEY ("purchaseId") REFERENCES "Purchase"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "twoFactor" ADD CONSTRAINT "twoFactor_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
