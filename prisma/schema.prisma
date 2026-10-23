@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -273,6 +272,19 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model TwoFactor {
+  id          String   @id
+  secret      String
+  backupCodes String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verified    Boolean? @default(true)
+
+  @@index([secret])
+  @@index([userId])
+  @@map("twoFactor")
 }
 
 // ── Products & Categories ─────────────────────────────────────────────────────
@@ -796,17 +808,4 @@ model PurchasePayment {
   paidAt     DateTime             @default(now())
 
   purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-}
-
-model TwoFactor {
-  id          String   @id
-  secret      String
-  backupCodes String
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  verified    Boolean? @default(true)
-
-  @@index([secret])
-  @@index([userId])
-  @@map("twoFactor")
 }

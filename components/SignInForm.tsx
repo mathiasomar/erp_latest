@@ -11,6 +11,13 @@ import { authClient } from "@/lib/auth-client";
 import { useState } from "react";
 import { Spinner } from "./ui/spinner";
 import { useRouter } from "next/navigation";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "./ui/input-otp";
 
 const formSchema = z.object({
   // email: z.string().regex(/^\S+@\S+\.\S+$/, "Invalid email address"),
@@ -34,7 +41,10 @@ const SignInForm = () => {
     },
   });
 
-  const finishSignIn = (roleValue?: string | null, username?: string | null) => {
+  const finishSignIn = (
+    roleValue?: string | null,
+    username?: string | null,
+  ) => {
     const role = roleValue?.toUpperCase() ?? "CASHIER";
     toast.success(
       `Logged in successfully! Welcome back, ${username ?? "user"} (${role})!`,
@@ -75,10 +85,7 @@ const SignInForm = () => {
           setIsSigningIn(true);
         },
         onSuccess: async (ctx) => {
-          if (
-            "twoFactorRedirect" in ctx.data &&
-            ctx.data.twoFactorRedirect
-          ) {
+          if ("twoFactorRedirect" in ctx.data && ctx.data.twoFactorRedirect) {
             setIsSigningIn(false);
             setRequiresOtp(true);
             await sendOtp();
@@ -144,19 +151,29 @@ const SignInForm = () => {
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="sign-in-otp">Verification code</FieldLabel>
-                <Input
-                  id="sign-in-otp"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={otp}
-                  onChange={(event) =>
-                    setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  placeholder="Enter 6-digit code"
-                  required
-                />
+                <div className="flex justify-center">
+                  <InputOTP
+                    id="sign-in-otp"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    pattern={REGEXP_ONLY_DIGITS}
+                    value={otp}
+                    onChange={setOtp}
+                    required
+                  >
+                    <InputOTPGroup className="gap-6">
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                    </InputOTPGroup>
+                    <InputOTPSeparator />
+                    <InputOTPGroup className="gap-6">
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
               </Field>
               <Button
                 type="submit"
@@ -185,7 +202,9 @@ const SignInForm = () => {
         </>
       ) : (
         <>
-          <h1 className="text-md font-semibold my-4">Sign In to your account</h1>
+          <h1 className="text-md font-semibold my-4">
+            Sign In to your account
+          </h1>
           <form id="login_form" onSubmit={form.handleSubmit(onSubmit)}>
             <FieldGroup>
               <Controller
